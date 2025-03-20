@@ -18,7 +18,7 @@ app.get('/', (_req: Request, res: Response) => {
  */
 function processQueryParams(req: Request): QueryParams {
   const queryParams: QueryParams = {};
-  
+
   Object.entries(req.query).forEach(([key, value]) => {
     if (typeof value === 'string') {
       // Convert numeric strings to numbers
@@ -33,7 +33,7 @@ function processQueryParams(req: Request): QueryParams {
       }
     }
   });
-  
+
   return queryParams;
 }
 
@@ -62,30 +62,15 @@ async function handleApiRequest<T>(
 
 // Hevy API endpoints
 app.get('/api/workouts', async (req: Request, res: Response) => {
-  await handleApiRequest(
-    req,
-    res,
-    hevyApi.getWorkouts,
-    'Failed to fetch workouts'
-  );
+  await handleApiRequest(req, res, hevyApi.getWorkouts, 'Failed to fetch workouts');
 });
 
 app.get('/api/routines', async (req: Request, res: Response) => {
-  await handleApiRequest(
-    req,
-    res,
-    hevyApi.getRoutines,
-    'Failed to fetch routines'
-  );
+  await handleApiRequest(req, res, hevyApi.getRoutines, 'Failed to fetch routines');
 });
 
 app.get('/api/exercises', async (req: Request, res: Response) => {
-  await handleApiRequest(
-    req,
-    res,
-    hevyApi.getExercises,
-    'Failed to fetch exercise templates'
-  );
+  await handleApiRequest(req, res, hevyApi.getExercises, 'Failed to fetch exercise templates');
 });
 
 app.listen(port, () => {

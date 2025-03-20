@@ -59,7 +59,7 @@ async function fetchFromHevy<T>(endpoint: string, params: QueryParams = {}): Pro
       throw new Error(`API request failed with status ${response.status}`);
     }
 
-    return await response.json() as T;
+    return (await response.json()) as T;
   } catch (error) {
     console.error(`Error fetching from ${endpoint}:`, error);
     throw error;

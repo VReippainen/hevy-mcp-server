@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A simple hello world Node.js server",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node src/index.ts'",
