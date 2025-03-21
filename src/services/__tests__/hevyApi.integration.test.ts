@@ -96,7 +96,11 @@ describe('HevyApi Service (Integration)', () => {
       // Mock successful response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: jest.fn().mockResolvedValue({ workouts: mockWorkouts }),
+        json: jest.fn().mockResolvedValue({
+          workouts: mockWorkouts,
+          page: 1,
+          page_count: 2,
+        }),
       });
 
       // Call the function
@@ -115,24 +119,36 @@ describe('HevyApi Service (Integration)', () => {
       );
 
       // Verify result matches mock data
-      expect(result).toEqual(mockWorkouts);
+      expect(result).toEqual({
+        workouts: mockWorkouts,
+        page: 1,
+        pageCount: 2,
+      });
     });
 
     it('should handle custom pagination parameters', async () => {
       // Mock successful response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: jest.fn().mockResolvedValue({ workouts: mockWorkouts }),
+        json: jest.fn().mockResolvedValue({
+          workouts: mockWorkouts,
+          page: 2,
+          page_count: 3,
+        }),
       });
 
       // Call with custom parameters (only page and pageSize are allowed)
-      await getWorkouts({ page: 2, pageSize: 10 });
+      const result = await getWorkouts({ page: 2, pageSize: 10 });
 
       // Verify URL includes all parameters
       expect(fetch).toHaveBeenCalledWith(
         'https://test-api.hevyapp.com/workouts?page=2&pageSize=10',
         expect.any(Object)
       );
+
+      // Verify result has pagination info
+      expect(result.page).toBe(2);
+      expect(result.pageCount).toBe(3);
     });
 
     it('should handle API error responses', async () => {
@@ -162,7 +178,11 @@ describe('HevyApi Service (Integration)', () => {
       // Mock successful response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: jest.fn().mockResolvedValue({ routines: mockRoutines }),
+        json: jest.fn().mockResolvedValue({
+          routines: mockRoutines,
+          page: 1,
+          page_count: 1,
+        }),
       });
 
       // Call the function
@@ -175,21 +195,32 @@ describe('HevyApi Service (Integration)', () => {
       );
 
       // Verify result
-      expect(result).toEqual(mockRoutines);
+      expect(result).toEqual({
+        routines: mockRoutines,
+        page: 1,
+        pageCount: 1,
+      });
     });
 
     it('should handle empty response', async () => {
       // Mock response with no routines
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: jest.fn().mockResolvedValue({}), // No routines property
+        json: jest.fn().mockResolvedValue({
+          page: 1,
+          page_count: 0,
+        }), // No routines property
       });
 
       // Call function
       const result = await getRoutines();
 
-      // Should return empty array
-      expect(result).toEqual([]);
+      // Should return empty array with pagination info
+      expect(result).toEqual({
+        routines: [],
+        page: 1,
+        pageCount: 0,
+      });
     });
   });
 
@@ -198,7 +229,11 @@ describe('HevyApi Service (Integration)', () => {
       // Mock successful response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: jest.fn().mockResolvedValue({ exercise_templates: mockExercises }),
+        json: jest.fn().mockResolvedValue({
+          exercise_templates: mockExercises,
+          page: 1,
+          page_count: 2,
+        }),
       });
 
       // Call the function
@@ -211,12 +246,16 @@ describe('HevyApi Service (Integration)', () => {
       );
 
       // Verify result
-      expect(result).toEqual(mockExercises);
+      expect(result).toEqual({
+        exercises: mockExercises,
+        page: 1,
+        pageCount: 2,
+      });
     });
   });
 
   describe('Module default export', () => {
-    it('should export all API functions', () => {
+    it('should expose all API functions', () => {
       expect(hevyApi.getWorkouts).toBe(getWorkouts);
       expect(hevyApi.getRoutines).toBe(getRoutines);
       expect(hevyApi.getExercises).toBe(getExercises);

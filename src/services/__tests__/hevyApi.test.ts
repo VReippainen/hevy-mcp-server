@@ -13,13 +13,15 @@ describe('HevyAPI Service', () => {
   describe('getWorkouts function', () => {
     it('should fetch workouts correctly', async () => {
       // Mock data is already set up in __mocks__/hevyApi.ts
-      const workouts = await getWorkouts();
+      const result = await getWorkouts();
 
       // Assertions
       expect(getWorkouts).toHaveBeenCalled();
-      expect(workouts).toHaveLength(2);
-      expect(workouts[0].id).toBe('1');
-      expect(workouts[1].title).toBe('Workout 2');
+      expect(result.workouts).toHaveLength(2);
+      expect(result.workouts[0].id).toBe('1');
+      expect(result.workouts[1].title).toBe('Workout 2');
+      expect(result.page).toBe(1);
+      expect(result.pageCount).toBe(1);
     });
 
     it('should handle pagination parameters correctly', async () => {
@@ -33,21 +35,25 @@ describe('HevyAPI Service', () => {
 
   describe('getRoutines function', () => {
     it('should fetch routines correctly', async () => {
-      const routines = await getRoutines();
+      const result = await getRoutines();
 
       expect(getRoutines).toHaveBeenCalled();
-      expect(routines).toHaveLength(2);
-      expect(routines[0].name).toBe('Routine 1');
+      expect(result.routines).toHaveLength(2);
+      expect(result.routines[0].name).toBe('Routine 1');
+      expect(result.page).toBe(1);
+      expect(result.pageCount).toBe(1);
     });
   });
 
   describe('getExercises function', () => {
     it('should fetch exercises correctly', async () => {
-      const exercises = await getExercises();
+      const result = await getExercises();
 
       expect(getExercises).toHaveBeenCalled();
-      expect(exercises).toHaveLength(2);
-      expect(exercises[0].title).toBe('Exercise 1');
+      expect(result.exercises).toHaveLength(2);
+      expect(result.exercises[0].title).toBe('Exercise 1');
+      expect(result.page).toBe(1);
+      expect(result.pageCount).toBe(1);
     });
   });
 

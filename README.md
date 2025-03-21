@@ -169,29 +169,39 @@ Located in `/src/services/api.ts`, this service provides methods for making HTTP
 
 Located in `/src/services/hevyApi.ts`, this service provides methods for interacting with the Hevy API:
 
-- `getWorkouts(params)`: Gets workouts with optional filter parameters
-- `getRoutines(params)`: Gets routines with optional filter parameters
-- `getExercises(params)`: Gets exercise templates with optional filter parameters
+- `getWorkouts(params)`: Gets workouts with optional filter parameters, returns data and pagination info
+- `getRoutines(params)`: Gets routines with optional filter parameters, returns data and pagination info
+- `getExercises(params)`: Gets exercise templates with optional filter parameters, returns data and pagination info
+- `getPaginationInfo(endpoint, params)`: Gets only the pagination information for an endpoint
 
 Example usage:
 ```typescript
 import hevyApi from './services/hevyApi';
 import { Workout, ExerciseTemplate } from './types';
 
-// Get all workouts
-const workouts = await hevyApi.getWorkouts();
+// Get all workouts with pagination info
+const result = await hevyApi.getWorkouts();
+const workouts = result.workouts;
+const currentPage = result.page;
+const totalPages = result.pageCount;
 
 // Get workouts with filters
-const filteredWorkouts = await hevyApi.getWorkouts({
+const filteredResult = await hevyApi.getWorkouts({
   page: 2,
   pageSize: 5
 });
+const filteredWorkouts = filteredResult.workouts;
 
 // Get exercise templates
-const exercises = await hevyApi.getExercises({
+const exercisesResult = await hevyApi.getExercises({
   page: 1,
   pageSize: 10
 });
+const exercises = exercisesResult.exercises;
+
+// Get only pagination info
+const paginationInfo = await hevyApi.getPaginationInfo('workouts', { page: 1, pageSize: 10 });
+console.log(`Current page: ${paginationInfo.page}, Total pages: ${paginationInfo.pageCount}`);
 ```
 
 ## Project Structure

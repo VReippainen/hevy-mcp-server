@@ -55,13 +55,34 @@ const mockExercises = [
 ];
 
 // Mock API functions
-export const getWorkouts = jest.fn().mockResolvedValue(mockWorkouts);
-export const getRoutines = jest.fn().mockResolvedValue(mockRoutines);
-export const getExercises = jest.fn().mockResolvedValue(mockExercises);
+export const getWorkouts = jest.fn().mockResolvedValue({
+  workouts: mockWorkouts,
+  page: 1,
+  pageCount: 1,
+});
+
+export const getRoutines = jest.fn().mockResolvedValue({
+  routines: mockRoutines,
+  page: 1,
+  pageCount: 1,
+});
+
+export const getExercises = jest.fn().mockResolvedValue({
+  exercises: mockExercises,
+  page: 1,
+  pageCount: 1,
+});
+
+// Mock pagination info function
+export const getPaginationInfo = jest.fn().mockResolvedValue({
+  page: 1,
+  pageCount: 1,
+});
 
 // Default export with all API functions
 export default {
   getWorkouts,
   getRoutines,
   getExercises,
+  getPaginationInfo,
 };
