@@ -8,6 +8,7 @@ import {
   Workout,
   WorkoutResponse,
   PaginationParams,
+  RoutineResponse,
 } from '../types/index';
 import { validatePagination } from '../utils/validation';
 import config from '../config';
@@ -86,7 +87,7 @@ export const getWorkouts = async (params: PaginationParams = {}): Promise<Workou
  * @throws {Error} - If page or pageSize validation fails
  */
 export const getRoutines = async (params: PaginationParams = {}): Promise<Routine[]> => {
-  const data = await fetchFromHevy<{ routines: Routine[] }>('routines', params);
+  const data = await fetchFromHevy<RoutineResponse>('routines', params);
   return data.routines || [];
 };
 
