@@ -118,19 +118,19 @@ describe('HevyApi Service (Integration)', () => {
       expect(result).toEqual(mockWorkouts);
     });
 
-    it('should handle custom query parameters', async () => {
+    it('should handle custom pagination parameters', async () => {
       // Mock successful response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValue({ workouts: mockWorkouts }),
       });
 
-      // Call with custom parameters
-      await getWorkouts({ page: 2, pageSize: 20, userId: 'user123' });
+      // Call with custom parameters (only page and pageSize are allowed)
+      await getWorkouts({ page: 2, pageSize: 10 });
 
       // Verify URL includes all parameters
       expect(fetch).toHaveBeenCalledWith(
-        'https://test-api.hevyapp.com/workouts?page=2&pageSize=20&userId=user123',
+        'https://test-api.hevyapp.com/workouts?page=2&pageSize=10',
         expect.any(Object)
       );
     });
@@ -140,6 +140,7 @@ describe('HevyApi Service (Integration)', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
+        statusText: 'Unauthorized',
       });
 
       // Verify function throws error
@@ -148,10 +149,11 @@ describe('HevyApi Service (Integration)', () => {
 
     it('should handle network errors', async () => {
       // Mock network error
-      (fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+      const networkError = new Error('Network error');
+      (fetch as jest.Mock).mockRejectedValueOnce(networkError);
 
-      // Verify function throws error
-      await expect(getWorkouts()).rejects.toThrow('Network error');
+      // Verify function throws error - the original error should be propagated
+      await expect(getWorkouts()).rejects.toThrow(networkError);
     });
   });
 

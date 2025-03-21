@@ -22,12 +22,12 @@ describe('HevyAPI Service', () => {
       expect(workouts[1].title).toBe('Workout 2');
     });
 
-    it('should handle query parameters correctly', async () => {
+    it('should handle pagination parameters correctly', async () => {
       // Call with parameters
-      await getWorkouts({ page: 2, userId: 'abc123' });
+      await getWorkouts({ page: 2, pageSize: 5 });
 
       // Check parameters passed to mock
-      expect(getWorkouts).toHaveBeenCalledWith({ page: 2, userId: 'abc123' });
+      expect(getWorkouts).toHaveBeenCalledWith({ page: 2, pageSize: 5 });
     });
   });
 
