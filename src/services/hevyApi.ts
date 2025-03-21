@@ -11,18 +11,12 @@ import {
 } from '../types/index';
 import config from '../config';
 
-// Base URL for the Hevy API from config
-const HEVY_API_BASE_URL = config.api.hevyBaseUrl;
-
-// API key for authentication from config
-const API_KEY = config.api.hevyApiKey;
-
 /**
  * Headers required for Hevy API requests
  */
 const getHeaders = () => {
   return {
-    'api-key': API_KEY,
+    'api-key': config.api.hevyApiKey,
     'Content-Type': 'application/json',
   };
 };
@@ -50,7 +44,7 @@ async function fetchFromHevy<T>(endpoint: string, params: QueryParams = {}): Pro
         ).toString()
       : '';
 
-    const response = await fetch(`${HEVY_API_BASE_URL}/${endpoint}${queryString}`, {
+    const response = await fetch(`${config.api.hevyBaseUrl}/${endpoint}${queryString}`, {
       method: 'GET',
       headers: getHeaders(),
     });

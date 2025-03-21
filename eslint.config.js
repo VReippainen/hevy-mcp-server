@@ -6,7 +6,7 @@ import prettierPlugin from 'eslint-plugin-prettier';
 export default [
   {
     // global ignores
-    ignores: ['node_modules/**', 'dist/**', '*.js'],
+    ignores: ['node_modules/**', 'dist/**', '*.js', 'coverage/**'],
   },
   {
     files: ['**/*.ts'],

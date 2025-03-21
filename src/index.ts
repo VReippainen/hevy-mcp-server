@@ -4,19 +4,38 @@ import hevyApi from './services/hevyApi';
 import { QueryParams } from './types/index';
 import config from './config';
 
-const app = express();
-const port = config.server.port;
+/**
+ * Create and configure the Express application
+ */
+export function createApp() {
+  const app = express();
 
-app.get('/', (_req: Request, res: Response) => {
-  res.send('Hello World!');
-});
+  app.get('/', (_req: Request, res: Response) => {
+    res.send('Hello World!');
+  });
+
+  // Hevy API endpoints
+  app.get('/api/workouts', async (req: Request, res: Response) => {
+    await handleApiRequest(req, res, hevyApi.getWorkouts, 'Failed to fetch workouts');
+  });
+
+  app.get('/api/routines', async (req: Request, res: Response) => {
+    await handleApiRequest(req, res, hevyApi.getRoutines, 'Failed to fetch routines');
+  });
+
+  app.get('/api/exercises', async (req: Request, res: Response) => {
+    await handleApiRequest(req, res, hevyApi.getExercises, 'Failed to fetch exercise templates');
+  });
+
+  return app;
+}
 
 /**
  * Process query parameters from request
  * @param {Request} req - Express request object
  * @returns {QueryParams} - Processed query parameters
  */
-function processQueryParams(req: Request): QueryParams {
+export function processQueryParams(req: Request): QueryParams {
   const queryParams: QueryParams = {};
 
   Object.entries(req.query).forEach(([key, value]) => {
@@ -44,7 +63,7 @@ function processQueryParams(req: Request): QueryParams {
  * @param {Function} fetchFn - Function to fetch data from Hevy API
  * @param {string} errorMessage - Error message to display if request fails
  */
-async function handleApiRequest<T>(
+export async function handleApiRequest<T>(
   req: Request,
   res: Response,
   fetchFn: (params: QueryParams) => Promise<T>,
@@ -60,20 +79,13 @@ async function handleApiRequest<T>(
   }
 }
 
-// Hevy API endpoints
-app.get('/api/workouts', async (req: Request, res: Response) => {
-  await handleApiRequest(req, res, hevyApi.getWorkouts, 'Failed to fetch workouts');
-});
+// Only start the server in non-test environments
+if (process.env.NODE_ENV !== 'test') {
+  const app = createApp();
+  const port = config.server.port;
 
-app.get('/api/routines', async (req: Request, res: Response) => {
-  await handleApiRequest(req, res, hevyApi.getRoutines, 'Failed to fetch routines');
-});
-
-app.get('/api/exercises', async (req: Request, res: Response) => {
-  await handleApiRequest(req, res, hevyApi.getExercises, 'Failed to fetch exercise templates');
-});
-
-app.listen(port, () => {
-  // We want to keep this log as it's useful for server startup info
-  console.warn(`Server running at http://localhost:${port}`);
-});
+  app.listen(port, () => {
+    // We want to keep this log as it's useful for server startup info
+    console.warn(`Server running at http://localhost:${port}`);
+  });
+}
