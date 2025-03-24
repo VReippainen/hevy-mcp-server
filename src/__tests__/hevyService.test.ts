@@ -11,10 +11,11 @@ import {
   fetchAllRoutines,
   getRecentWorkouts,
   getWorkoutsInTimeframe,
-  getExerciseDetails,
   getWorkoutDetails,
   getUserRoutines,
   getExerciseTemplates,
+  getExerciseDetailsById,
+  searchExerciseTemplatesByName,
 } from '../services/hevyService';
 import hevyApi from '../services/hevyApi';
 import { Workout, ExerciseTemplate, Routine } from '../types';
@@ -477,9 +478,9 @@ describe('Hevy Service', () => {
       });
     });
 
-    describe('getExerciseDetails', () => {
+    describe('getExerciseDetailsById', () => {
       it('should return details for a specific exercise', async () => {
-        const exerciseDetails = await getExerciseDetails('dummy-token', 'exercise1');
+        const exerciseDetails = await getExerciseDetailsById('dummy-token', 'exercise1');
 
         expect(exerciseDetails).not.toBeNull();
         if (exerciseDetails) {
@@ -488,7 +489,7 @@ describe('Hevy Service', () => {
       });
 
       it('should return null if exercise not found', async () => {
-        const exerciseDetails = await getExerciseDetails('dummy-token', 'nonexistent');
+        const exerciseDetails = await getExerciseDetailsById('dummy-token', 'nonexistent');
 
         expect(exerciseDetails).toBeNull();
       });
@@ -498,7 +499,7 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const exerciseDetails = await getExerciseDetails('dummy-token', 'exercise1');
+        const exerciseDetails = await getExerciseDetailsById('dummy-token', 'exercise1');
 
         expect(exerciseDetails).toBeNull();
       });
@@ -586,6 +587,48 @@ describe('Hevy Service', () => {
         const result = await getExerciseTemplates('dummy-token');
 
         expect(result).toEqual({ exercise_templates: [], page: 1, page_count: 0 });
+      });
+    });
+
+    describe('searchExerciseTemplatesByName', () => {
+      it('should return matching exercise templates', async () => {
+        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'Squat');
+
+        expect(searchResults).toHaveLength(1);
+        expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
+      });
+
+      it('should return multiple matching templates', async () => {
+        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'Press');
+
+        expect(searchResults).toHaveLength(2);
+        expect(searchResults).toEqual([mockExerciseTemplates[1], mockExerciseTemplates[2]]);
+      });
+
+      it('should be case insensitive', async () => {
+        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'squat');
+
+        expect(searchResults).toHaveLength(1);
+        expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
+      });
+
+      it('should return empty array when no matches found', async () => {
+        const searchResults = await searchExerciseTemplatesByName(
+          'dummy-token',
+          'NonexistentExercise'
+        );
+
+        expect(searchResults).toHaveLength(0);
+      });
+
+      it('should return empty array when API call fails', async () => {
+        (
+          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
+        ).mockRejectedValueOnce(new Error('API error'));
+
+        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'Squat');
+
+        expect(searchResults).toHaveLength(0);
       });
     });
 

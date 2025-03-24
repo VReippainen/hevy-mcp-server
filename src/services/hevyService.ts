@@ -111,6 +111,7 @@ export function analyzeProgressForExercise(
  */
 export async function fetchAllWorkouts(_token: string): Promise<Workout[]> {
   try {
+    const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
 
     // Get the first page to determine total page count
@@ -136,6 +137,10 @@ export async function fetchAllWorkouts(_token: string): Promise<Workout[]> {
       ...pageResponses.flatMap((response) => response.workouts),
     ];
 
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    console.warn(`Fetched ${allWorkouts.length} workouts in ${duration}ms`);
+
     return allWorkouts;
   } catch (error) {
     console.error('Error fetching all workouts:', error);
@@ -150,6 +155,7 @@ export async function fetchAllWorkouts(_token: string): Promise<Workout[]> {
  */
 export async function fetchAllExerciseTemplates(_token: string): Promise<ExerciseTemplate[]> {
   try {
+    const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
 
     // Get the first page to determine total page count
@@ -174,6 +180,10 @@ export async function fetchAllExerciseTemplates(_token: string): Promise<Exercis
       ...firstPageResponse.exercises,
       ...pageResponses.flatMap((response) => response.exercises),
     ];
+
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    console.warn(`Fetched ${allExercises.length} exercise templates in ${duration}ms`);
 
     return allExercises;
   } catch (error) {
@@ -272,7 +282,7 @@ export async function getWorkoutDetails(
 /**
  * Get exercise details by ID
  */
-export async function getExerciseDetails(
+export async function getExerciseDetailsById(
   _token: string,
   exerciseId: string
 ): Promise<ExerciseTemplate | null> {
@@ -288,12 +298,32 @@ export async function getExerciseDetails(
 }
 
 /**
+ * Get exercise details by ID
+ */
+export async function searchExerciseTemplatesByName(
+  _token: string,
+  searchTerm: string
+): Promise<ExerciseTemplate[]> {
+  try {
+    // Get all exercise templates and find the one with the matching ID
+    const allExercises = await fetchAllExerciseTemplates(_token);
+    const exercises = allExercises.filter((e) =>
+      e.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return exercises ?? [];
+  } catch (error) {
+    console.error(`Error fetching exercise details for search term ${searchTerm}:`, error);
+    return [];
+  }
+}
+
+/**
  * Get workouts within a specific timeframe
  */
 export async function getWorkoutsInTimeframe(
   _token: string,
   startDate: Date,
-  limit: number = 100
+  limit: number = 1000
 ): Promise<WorkoutResponse> {
   try {
     // Get all workouts
@@ -344,7 +374,7 @@ export async function getUserRoutines(_token: string): Promise<RoutineResponse> 
  */
 export async function getExerciseTemplates(
   _token: string,
-  limit: number = 100
+  limit: number = 1000
 ): Promise<ExerciseTemplateResponse> {
   try {
     // Get all exercise templates
@@ -473,9 +503,8 @@ export default {
   fetchAllRoutines,
   getRecentWorkouts,
   getWorkoutDetails,
-  getExerciseDetails,
+  searchExerciseTemplatesByName,
   getWorkoutsInTimeframe,
-  getUserRoutines,
   getExerciseTemplates,
   calculateVolumeByMuscleGroup,
   analyzeMuscleGroupFrequency,

@@ -18,7 +18,7 @@ interface GetWorkoutDetailsParams extends TokenParams {
 }
 
 interface GetExerciseProgressParams extends TokenParams {
-  exerciseId: string;
+  searchTerm: string;
   timeframe: 'month' | 'quarter' | 'year' | 'all';
 }
 
@@ -38,7 +38,7 @@ server.tool(
   "Get user's recent workouts",
   {
     token: z.string().describe('User API token'),
-    limit: z.number().min(1).max(50).default(10).describe('Number of workouts to retrieve'),
+    limit: z.number().min(1).max(1000).default(1000).describe('Number of workouts to retrieve'),
   },
   async ({ token, limit }: GetRecentWorkoutsParams) => {
     const workoutData = await hevyService.getRecentWorkouts(token, limit);
@@ -141,24 +141,24 @@ server.tool(
   'Get progress tracking for a specific exercise over time',
   {
     token: z.string().describe('User API token'),
-    exerciseId: z.string().describe('ID of the exercise to track'),
+    searchTerm: z.string().describe('Search exercises, which name contains the search term'),
     timeframe: z
       .enum(['month', 'quarter', 'year', 'all'])
-      .default('month')
+      .default('all')
       .describe('Timeframe for progress tracking'),
   },
-  async ({ token, exerciseId, timeframe }: GetExerciseProgressParams) => {
+  async ({ token, searchTerm, timeframe }: GetExerciseProgressParams) => {
     // Get exercise details first
-    const exercise = await hevyService.getExerciseDetails(token, exerciseId);
+    const exercises = await hevyService.searchExerciseTemplatesByName(token, searchTerm);
 
-    if (!exercise) {
+    if (!exercises) {
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
               success: false,
-              message: `Failed to retrieve exercise with ID: ${exerciseId}`,
+              message: `Failed to retrieve exercises with search term: ${searchTerm}`,
             }),
           },
         ],
@@ -169,7 +169,7 @@ server.tool(
     const startDate = getDateRangeFromTimeframe(timeframe);
 
     // Get all workouts in the timeframe
-    const workoutData = await hevyService.getWorkoutsInTimeframe(token, startDate, 100);
+    const workoutData = await hevyService.getWorkoutsInTimeframe(token, startDate);
 
     if (!workoutData) {
       return {
@@ -183,40 +183,32 @@ server.tool(
     }
 
     const workouts = workoutData.workouts || [];
-    const progressData = hevyService.analyzeProgressForExercise(workouts, exerciseId);
 
-    if (progressData.length === 0) {
+    const progressByExercise = exercises.map((exercise) => {
       return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: true,
-              exercise: exercise,
-              message: `No data found for ${exercise.title} in the selected timeframe`,
-              sessions: [],
-            }),
-          },
-        ],
+        exercise,
+        progress: hevyService.analyzeProgressForExercise(workouts, exercise.id),
       };
-    }
+    });
+    const response = progressByExercise
+      .filter(({ progress }) => progress.length > 0)
+      .map(({ exercise, progress }) => {
+        const maxWeight = Math.max(...progress.map((d) => d.maxWeight));
+        const maxReps = Math.max(...progress.map((d) => d.maxReps));
+        const maxVolume = Math.max(...progress.map((d) => d.maxVolume));
 
-    // Find personal records
-    const maxWeight = Math.max(...progressData.map((d) => d.maxWeight));
-    const maxReps = Math.max(...progressData.map((d) => d.maxReps));
-    const maxVolume = Math.max(...progressData.map((d) => d.maxVolume));
-
-    const response = {
-      success: true,
-      exercise,
-      timeframe,
-      personalRecords: {
-        maxWeight,
-        maxReps,
-        maxVolume,
-      },
-      sessions: progressData,
-    };
+        return {
+          success: true,
+          timeframe,
+          exercise,
+          personalRecords: {
+            maxWeight,
+            maxReps,
+            maxVolume,
+          },
+          sessions: progress,
+        };
+      });
 
     return {
       content: [
@@ -236,26 +228,14 @@ server.tool(
     token: z.string().describe('User API token'),
   },
   async ({ token }: TokenParams) => {
-    const routineData = await hevyService.getUserRoutines(token);
+    const routines = await hevyService.fetchAllRoutines(token);
 
-    if (!routineData) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: false, message: 'Failed to retrieve routines' }),
-          },
-        ],
-      };
-    }
-
-    const routines = routineData.routines || [];
     if (routines.length === 0) {
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ success: true, routines: [] }),
+            text: JSON.stringify({ success: false, message: 'Failed to retrieve routines' }),
           },
         ],
       };
