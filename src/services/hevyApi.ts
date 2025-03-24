@@ -12,15 +12,7 @@ import {
 } from '../types/index.js';
 import config from '../config.js';
 import { validatePagination } from '../utils/index.js';
-/**
- * Headers required for Hevy API requests
- */
-const getHeaders = () => {
-  return {
-    'api-key': config.api.hevyApiKey,
-    'Content-Type': 'application/json',
-  };
-};
+import { get } from './api.js';
 
 /**
  * Generic fetch function for Hevy API
@@ -40,24 +32,10 @@ async function fetchFromHevy<T>(endpoint: string, params: PaginationParams = {})
       ...validatedParams,
     };
 
-    // Build query string from parameters
-    const queryString = Object.keys(queryParams).length
-      ? '?' +
-        new URLSearchParams(
-          Object.entries(queryParams).map(([key, value]) => [key, String(value)])
-        ).toString()
-      : '';
+    const url = `${config.api.hevyBaseUrl}/${endpoint}`;
 
-    const response = await fetch(`${config.api.hevyBaseUrl}/${endpoint}${queryString}`, {
-      method: 'GET',
-      headers: getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    return (await response.json()) as T;
+    // Use the get function from api.ts which handles caching
+    return await get<T>(url, queryParams);
   } catch (error) {
     console.error(`Error fetching from ${endpoint}:`, error);
     throw error;

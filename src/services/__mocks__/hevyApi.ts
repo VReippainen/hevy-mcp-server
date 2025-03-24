@@ -73,16 +73,9 @@ export const getExercises = jest.fn().mockResolvedValue({
   pageCount: 1,
 });
 
-// Mock pagination info function
-export const getPaginationInfo = jest.fn().mockResolvedValue({
-  page: 1,
-  pageCount: 1,
-});
-
 // Default export with all API functions
 export default {
   getWorkouts,
   getRoutines,
   getExercises,
-  getPaginationInfo,
 };

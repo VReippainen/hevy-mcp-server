@@ -4,26 +4,22 @@ import { z } from 'zod';
 import hevyService from './services/hevyService.js';
 import { getDateRangeFromTimeframe } from './utils/dateUtils.js';
 
-interface TokenParams {
-  token: string;
-}
-
 // Define parameter types for tool handlers
-interface GetRecentWorkoutsParams extends TokenParams {
+interface GetRecentWorkoutsParams {
   limit: number;
 }
 
-interface GetWorkoutDetailsParams extends TokenParams {
+interface GetWorkoutDetailsParams {
   workoutId: string;
 }
 
-interface GetExerciseProgressParams extends TokenParams {
+interface GetExerciseProgressParams {
   searchTerm: string;
-  timeframe: 'month' | 'quarter' | 'year' | 'all';
+  startDate: string;
 }
 
-interface AnalyzeWorkoutVolumeParams extends TokenParams {
-  timeframe: 'week' | 'month' | 'quarter';
+interface AnalyzeWorkoutVolumeParams {
+  timeframe: 'week' | 'month' | 'quarter' | 'year';
 }
 
 // Create server instance
@@ -37,11 +33,10 @@ server.tool(
   'get-recent-workouts',
   "Get user's recent workouts",
   {
-    token: z.string().describe('User API token'),
     limit: z.number().min(1).max(1000).default(1000).describe('Number of workouts to retrieve'),
   },
-  async ({ token, limit }: GetRecentWorkoutsParams) => {
-    const workoutData = await hevyService.getRecentWorkouts(token, limit);
+  async ({ limit }: GetRecentWorkoutsParams) => {
+    const workoutData = await hevyService.getRecentWorkouts(limit);
 
     if (!workoutData) {
       return {
@@ -94,11 +89,10 @@ server.tool(
   'get-workout-details',
   'Get detailed information about a specific workout',
   {
-    token: z.string().describe('User API token'),
     workoutId: z.string().describe('ID of the workout to retrieve'),
   },
-  async ({ token, workoutId }: GetWorkoutDetailsParams) => {
-    const workout = await hevyService.getWorkoutDetails(token, workoutId);
+  async ({ workoutId }: GetWorkoutDetailsParams) => {
+    const workout = await hevyService.getWorkoutDetails(workoutId);
 
     if (!workout) {
       return {
@@ -140,16 +134,12 @@ server.tool(
   'get-exercise-progress',
   'Get progress tracking for a specific exercise over time',
   {
-    token: z.string().describe('User API token'),
     searchTerm: z.string().describe('Search exercises, which name contains the search term'),
-    timeframe: z
-      .enum(['month', 'quarter', 'year', 'all'])
-      .default('all')
-      .describe('Timeframe for progress tracking'),
+    startDate: z.string().describe('ISO date string for the start date of the progress tracking'),
   },
-  async ({ token, searchTerm, timeframe }: GetExerciseProgressParams) => {
+  async ({ searchTerm, startDate }: GetExerciseProgressParams) => {
     // Get exercise details first
-    const exercises = await hevyService.searchExerciseTemplatesByName(token, searchTerm);
+    const exercises = await hevyService.searchExerciseTemplatesByName(searchTerm);
 
     if (!exercises) {
       return {
@@ -165,11 +155,8 @@ server.tool(
       };
     }
 
-    // Determine date range based on timeframe
-    const startDate = getDateRangeFromTimeframe(timeframe);
-
-    // Get all workouts in the timeframe
-    const workoutData = await hevyService.getWorkoutsInTimeframe(token, startDate);
+    // Get all workouts since the start date
+    const workoutData = await hevyService.getWorkoutsInTimeframe(new Date(startDate));
 
     if (!workoutData) {
       return {
@@ -199,7 +186,7 @@ server.tool(
 
         return {
           success: true,
-          timeframe,
+          startDate,
           exercise,
           personalRecords: {
             maxWeight,
@@ -221,53 +208,45 @@ server.tool(
   }
 );
 
-server.tool(
-  'get-routines',
-  "Get user's workout routines",
-  {
-    token: z.string().describe('User API token'),
-  },
-  async ({ token }: TokenParams) => {
-    const routines = await hevyService.fetchAllRoutines(token);
+server.tool('get-routines', "Get user's workout routines", {}, async () => {
+  const routines = await hevyService.fetchAllRoutines();
 
-    if (routines.length === 0) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: false, message: 'Failed to retrieve routines' }),
-          },
-        ],
-      };
-    }
-
+  if (routines.length === 0) {
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({ success: true, routines }),
+          text: JSON.stringify({ success: false, message: 'Failed to retrieve routines' }),
         },
       ],
     };
   }
-);
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({ success: true, routines }),
+      },
+    ],
+  };
+});
 
 server.tool(
   'analyze-workout-volume',
   'Analyze workout volume by muscle group',
   {
-    token: z.string().describe('User API token'),
     timeframe: z
-      .enum(['week', 'month', 'quarter'])
+      .enum(['week', 'month', 'quarter', 'year'])
       .default('week')
       .describe('Timeframe for analysis'),
   },
-  async ({ token, timeframe }: AnalyzeWorkoutVolumeParams) => {
+  async ({ timeframe }: AnalyzeWorkoutVolumeParams) => {
     // Determine date range based on timeframe
     const startDate = getDateRangeFromTimeframe(timeframe);
 
     // Get workouts in the timeframe
-    const workoutData = await hevyService.getWorkoutsInTimeframe(token, startDate, 100);
+    const workoutData = await hevyService.getWorkoutsInTimeframe(startDate, 100);
 
     if (!workoutData) {
       return {
@@ -299,7 +278,7 @@ server.tool(
     }
 
     // Get exercise templates to map IDs to muscle groups
-    const exerciseData = await hevyService.getExerciseTemplates(token, 200);
+    const exerciseData = await hevyService.getExerciseTemplates(200);
 
     if (!exerciseData || !exerciseData.exercise_templates) {
       return {

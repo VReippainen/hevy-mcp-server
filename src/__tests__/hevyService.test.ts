@@ -279,7 +279,7 @@ describe('Hevy Service', () => {
 
     describe('fetchAllWorkouts', () => {
       it('should fetch all workouts from the API', async () => {
-        const workouts = await fetchAllWorkouts('dummy-token');
+        const workouts = await fetchAllWorkouts();
 
         expect(hevyApi.getWorkouts).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
         expect(workouts).toEqual(mockWorkouts);
@@ -304,7 +304,7 @@ describe('Hevy Service', () => {
           pageCount: 2,
         });
 
-        const workouts = await fetchAllWorkouts('dummy-token');
+        const workouts = await fetchAllWorkouts();
 
         expect(hevyApi.getWorkouts).toHaveBeenCalledTimes(2);
         expect(hevyApi.getWorkouts).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
@@ -318,7 +318,7 @@ describe('Hevy Service', () => {
           hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const workouts = await fetchAllWorkouts('dummy-token');
+        const workouts = await fetchAllWorkouts();
 
         expect(workouts).toEqual([]);
       });
@@ -326,7 +326,7 @@ describe('Hevy Service', () => {
 
     describe('fetchAllExerciseTemplates', () => {
       it('should fetch all exercise templates from the API', async () => {
-        const exercises = await fetchAllExerciseTemplates('dummy-token');
+        const exercises = await fetchAllExerciseTemplates();
 
         expect(hevyApi.getExercises).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
         expect(exercises).toEqual(mockExerciseTemplates);
@@ -351,7 +351,7 @@ describe('Hevy Service', () => {
           pageCount: 2,
         });
 
-        const exercises = await fetchAllExerciseTemplates('dummy-token');
+        const exercises = await fetchAllExerciseTemplates();
 
         expect(hevyApi.getExercises).toHaveBeenCalledTimes(2);
         expect(exercises).toHaveLength(3);
@@ -363,7 +363,7 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const exercises = await fetchAllExerciseTemplates('dummy-token');
+        const exercises = await fetchAllExerciseTemplates();
 
         expect(exercises).toEqual([]);
       });
@@ -371,7 +371,7 @@ describe('Hevy Service', () => {
 
     describe('fetchAllRoutines', () => {
       it('should fetch all routines from the API', async () => {
-        const routines = await fetchAllRoutines('dummy-token');
+        const routines = await fetchAllRoutines();
 
         expect(hevyApi.getRoutines).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
         expect(routines).toEqual(mockRoutines);
@@ -396,7 +396,7 @@ describe('Hevy Service', () => {
           pageCount: 2,
         });
 
-        const routines = await fetchAllRoutines('dummy-token');
+        const routines = await fetchAllRoutines();
 
         expect(hevyApi.getRoutines).toHaveBeenCalledTimes(2);
         expect(routines).toEqual(mockRoutines);
@@ -407,7 +407,7 @@ describe('Hevy Service', () => {
           hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const routines = await fetchAllRoutines('dummy-token');
+        const routines = await fetchAllRoutines();
 
         expect(routines).toEqual([]);
       });
@@ -420,7 +420,7 @@ describe('Hevy Service', () => {
           (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
         );
 
-        const recentWorkouts = await getRecentWorkouts('dummy-token', 1);
+        const recentWorkouts = await getRecentWorkouts(1);
 
         expect(Array.isArray(recentWorkouts)).toBe(false);
         expect(recentWorkouts).not.toBeNull();
@@ -432,7 +432,7 @@ describe('Hevy Service', () => {
       });
 
       it('should handle limit parameter', async () => {
-        const recentWorkouts = await getRecentWorkouts('dummy-token', 2);
+        const recentWorkouts = await getRecentWorkouts(2);
 
         expect(Array.isArray(recentWorkouts)).toBe(false);
         if (recentWorkouts && !Array.isArray(recentWorkouts)) {
@@ -445,7 +445,7 @@ describe('Hevy Service', () => {
           hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const recentWorkouts = await getRecentWorkouts('dummy-token');
+        const recentWorkouts = await getRecentWorkouts();
 
         expect(recentWorkouts).toEqual({ workouts: [], page: 1, page_count: 0 });
       });
@@ -453,7 +453,7 @@ describe('Hevy Service', () => {
 
     describe('getWorkoutDetails', () => {
       it('should return details for a specific workout', async () => {
-        const workoutDetails = await getWorkoutDetails('dummy-token', 'workout1');
+        const workoutDetails = await getWorkoutDetails('workout1');
 
         expect(workoutDetails).not.toBeNull();
         if (workoutDetails) {
@@ -462,7 +462,7 @@ describe('Hevy Service', () => {
       });
 
       it('should return null if workout not found', async () => {
-        const workoutDetails = await getWorkoutDetails('dummy-token', 'nonexistent');
+        const workoutDetails = await getWorkoutDetails('nonexistent');
 
         expect(workoutDetails).toBeNull();
       });
@@ -472,7 +472,7 @@ describe('Hevy Service', () => {
           hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const workoutDetails = await getWorkoutDetails('dummy-token', 'workout1');
+        const workoutDetails = await getWorkoutDetails('workout1');
 
         expect(workoutDetails).toBeNull();
       });
@@ -480,7 +480,7 @@ describe('Hevy Service', () => {
 
     describe('getExerciseDetailsById', () => {
       it('should return details for a specific exercise', async () => {
-        const exerciseDetails = await getExerciseDetailsById('dummy-token', 'exercise1');
+        const exerciseDetails = await getExerciseDetailsById('exercise1');
 
         expect(exerciseDetails).not.toBeNull();
         if (exerciseDetails) {
@@ -489,7 +489,7 @@ describe('Hevy Service', () => {
       });
 
       it('should return null if exercise not found', async () => {
-        const exerciseDetails = await getExerciseDetailsById('dummy-token', 'nonexistent');
+        const exerciseDetails = await getExerciseDetailsById('nonexistent');
 
         expect(exerciseDetails).toBeNull();
       });
@@ -499,7 +499,7 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const exerciseDetails = await getExerciseDetailsById('dummy-token', 'exercise1');
+        const exerciseDetails = await getExerciseDetailsById('exercise1');
 
         expect(exerciseDetails).toBeNull();
       });
@@ -508,7 +508,7 @@ describe('Hevy Service', () => {
     describe('getWorkoutsInTimeframe', () => {
       it('should return workouts after a specific date', async () => {
         const startDate = new Date('2023-01-02T00:00:00Z');
-        const result = await getWorkoutsInTimeframe('dummy-token', startDate);
+        const result = await getWorkoutsInTimeframe(startDate);
 
         expect(Array.isArray(result)).toBe(false);
         if (result && !Array.isArray(result)) {
@@ -519,7 +519,7 @@ describe('Hevy Service', () => {
 
       it('should handle limit parameter', async () => {
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe('dummy-token', startDate, 1);
+        const result = await getWorkoutsInTimeframe(startDate, 1);
 
         expect(Array.isArray(result)).toBe(false);
         if (result && !Array.isArray(result)) {
@@ -533,7 +533,7 @@ describe('Hevy Service', () => {
         ).mockRejectedValueOnce(new Error('API error'));
 
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe('dummy-token', startDate);
+        const result = await getWorkoutsInTimeframe(startDate);
 
         expect(result).toEqual({ workouts: [], page: 1, page_count: 0 });
       });
@@ -541,7 +541,7 @@ describe('Hevy Service', () => {
 
     describe('getUserRoutines', () => {
       it('should return user routines', async () => {
-        const result = await getUserRoutines('dummy-token');
+        const result = await getUserRoutines();
 
         expect(Array.isArray(result)).toBe(false);
         if (result && !Array.isArray(result)) {
@@ -554,7 +554,7 @@ describe('Hevy Service', () => {
           hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const result = await getUserRoutines('dummy-token');
+        const result = await getUserRoutines();
 
         expect(result).toEqual({ routines: [], page: 1, page_count: 0 });
       });
@@ -562,7 +562,7 @@ describe('Hevy Service', () => {
 
     describe('getExerciseTemplates', () => {
       it('should return exercise templates', async () => {
-        const result = await getExerciseTemplates('dummy-token');
+        const result = await getExerciseTemplates();
 
         expect(Array.isArray(result)).toBe(false);
         if (result && !Array.isArray(result)) {
@@ -571,7 +571,7 @@ describe('Hevy Service', () => {
       });
 
       it('should handle limit parameter', async () => {
-        const result = await getExerciseTemplates('dummy-token', 2);
+        const result = await getExerciseTemplates(2);
 
         expect(Array.isArray(result)).toBe(false);
         if (result && !Array.isArray(result)) {
@@ -584,7 +584,7 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const result = await getExerciseTemplates('dummy-token');
+        const result = await getExerciseTemplates();
 
         expect(result).toEqual({ exercise_templates: [], page: 1, page_count: 0 });
       });
@@ -592,31 +592,28 @@ describe('Hevy Service', () => {
 
     describe('searchExerciseTemplatesByName', () => {
       it('should return matching exercise templates', async () => {
-        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'Squat');
+        const searchResults = await searchExerciseTemplatesByName('Squat');
 
         expect(searchResults).toHaveLength(1);
         expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
       });
 
       it('should return multiple matching templates', async () => {
-        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'Press');
+        const searchResults = await searchExerciseTemplatesByName('Press');
 
         expect(searchResults).toHaveLength(2);
         expect(searchResults).toEqual([mockExerciseTemplates[1], mockExerciseTemplates[2]]);
       });
 
       it('should be case insensitive', async () => {
-        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'squat');
+        const searchResults = await searchExerciseTemplatesByName('squat');
 
         expect(searchResults).toHaveLength(1);
         expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
       });
 
       it('should return empty array when no matches found', async () => {
-        const searchResults = await searchExerciseTemplatesByName(
-          'dummy-token',
-          'NonexistentExercise'
-        );
+        const searchResults = await searchExerciseTemplatesByName('NonexistentExercise');
 
         expect(searchResults).toHaveLength(0);
       });
@@ -626,7 +623,7 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const searchResults = await searchExerciseTemplatesByName('dummy-token', 'Squat');
+        const searchResults = await searchExerciseTemplatesByName('Squat');
 
         expect(searchResults).toHaveLength(0);
       });

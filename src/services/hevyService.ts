@@ -106,10 +106,9 @@ export function analyzeProgressForExercise(
 
 /**
  * Fetch all workouts by handling pagination
- * @param _token API token (not used directly since the API module handles this)
  * @returns Promise with array of all workouts
  */
-export async function fetchAllWorkouts(_token: string): Promise<Workout[]> {
+export async function fetchAllWorkouts(): Promise<Workout[]> {
   try {
     const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
@@ -150,10 +149,9 @@ export async function fetchAllWorkouts(_token: string): Promise<Workout[]> {
 
 /**
  * Fetch all exercise templates by handling pagination
- * @param _token API token (not used directly since the API module handles this)
  * @returns Promise with array of all exercise templates
  */
-export async function fetchAllExerciseTemplates(_token: string): Promise<ExerciseTemplate[]> {
+export async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
   try {
     const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
@@ -194,10 +192,9 @@ export async function fetchAllExerciseTemplates(_token: string): Promise<Exercis
 
 /**
  * Fetch all routines by handling pagination
- * @param _token API token (not used directly since the API module handles this)
  * @returns Promise with array of all routines
  */
-export async function fetchAllRoutines(_token: string): Promise<Routine[]> {
+export async function fetchAllRoutines(): Promise<Routine[]> {
   try {
     const MAX_PAGE_SIZE = 10;
 
@@ -234,13 +231,10 @@ export async function fetchAllRoutines(_token: string): Promise<Routine[]> {
 /**
  * Get recent workouts for a user
  */
-export async function getRecentWorkouts(
-  _token: string,
-  limit: number = 10
-): Promise<WorkoutResponse> {
+export async function getRecentWorkouts(limit: number = 10): Promise<WorkoutResponse> {
   try {
     // Use fetchAllWorkouts instead to get all workouts, then take the most recent ones
-    const allWorkouts = await fetchAllWorkouts(_token);
+    const allWorkouts = await fetchAllWorkouts();
 
     // Sort by start_time descending (most recent first)
     const sortedWorkouts = [...allWorkouts].sort(
@@ -264,13 +258,10 @@ export async function getRecentWorkouts(
 /**
  * Get detailed information about a specific workout
  */
-export async function getWorkoutDetails(
-  _token: string,
-  workoutId: string
-): Promise<Workout | null> {
+export async function getWorkoutDetails(workoutId: string): Promise<Workout | null> {
   try {
     // Get all workouts and find the one with the matching ID
-    const allWorkouts = await fetchAllWorkouts(_token);
+    const allWorkouts = await fetchAllWorkouts();
     const workout = allWorkouts.find((w) => w.id === workoutId);
     return workout ?? null;
   } catch (error) {
@@ -282,13 +273,10 @@ export async function getWorkoutDetails(
 /**
  * Get exercise details by ID
  */
-export async function getExerciseDetailsById(
-  _token: string,
-  exerciseId: string
-): Promise<ExerciseTemplate | null> {
+export async function getExerciseDetailsById(exerciseId: string): Promise<ExerciseTemplate | null> {
   try {
     // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates(_token);
+    const allExercises = await fetchAllExerciseTemplates();
     const exercise = allExercises.find((e) => e.id === exerciseId);
     return exercise ?? null;
   } catch (error) {
@@ -301,12 +289,11 @@ export async function getExerciseDetailsById(
  * Get exercise details by ID
  */
 export async function searchExerciseTemplatesByName(
-  _token: string,
   searchTerm: string
 ): Promise<ExerciseTemplate[]> {
   try {
     // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates(_token);
+    const allExercises = await fetchAllExerciseTemplates();
     const exercises = allExercises.filter((e) =>
       e.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -321,13 +308,12 @@ export async function searchExerciseTemplatesByName(
  * Get workouts within a specific timeframe
  */
 export async function getWorkoutsInTimeframe(
-  _token: string,
   startDate: Date,
   limit: number = 1000
 ): Promise<WorkoutResponse> {
   try {
     // Get all workouts
-    const allWorkouts = await fetchAllWorkouts(_token);
+    const allWorkouts = await fetchAllWorkouts();
 
     // Filter workouts by start date
     const filteredWorkouts = allWorkouts.filter(
@@ -353,10 +339,10 @@ export async function getWorkoutsInTimeframe(
 /**
  * Get user routines
  */
-export async function getUserRoutines(_token: string): Promise<RoutineResponse> {
+export async function getUserRoutines(): Promise<RoutineResponse> {
   try {
     // Get all routines
-    const routines = await fetchAllRoutines(_token);
+    const routines = await fetchAllRoutines();
 
     return {
       routines,
@@ -373,12 +359,11 @@ export async function getUserRoutines(_token: string): Promise<RoutineResponse> 
  * Get exercise templates
  */
 export async function getExerciseTemplates(
-  _token: string,
   limit: number = 1000
 ): Promise<ExerciseTemplateResponse> {
   try {
     // Get all exercise templates
-    const allExerciseTemplates = await fetchAllExerciseTemplates(_token);
+    const allExerciseTemplates = await fetchAllExerciseTemplates();
 
     // Take only the number requested
     const limitedExerciseTemplates = allExerciseTemplates.slice(0, limit);
