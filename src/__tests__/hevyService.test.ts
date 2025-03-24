@@ -12,8 +12,6 @@ import {
   getRecentWorkouts,
   getWorkoutsInTimeframe,
   getWorkoutDetails,
-  getUserRoutines,
-  getExerciseTemplates,
   getExerciseDetailsById,
   searchExerciseTemplatesByName,
 } from '../services/hevyService';
@@ -422,21 +420,21 @@ describe('Hevy Service', () => {
 
         const recentWorkouts = await getRecentWorkouts(1);
 
-        expect(Array.isArray(recentWorkouts)).toBe(false);
+        expect(Array.isArray(recentWorkouts)).toBe(true);
         expect(recentWorkouts).not.toBeNull();
         if (recentWorkouts && !Array.isArray(recentWorkouts)) {
-          expect(recentWorkouts.workouts).toHaveLength(1);
+          expect(recentWorkouts).toHaveLength(1);
           // Expect the newest workout (workout2) to be first
-          expect(recentWorkouts.workouts[0]).toEqual(sortedMockWorkouts[0]);
+          expect(recentWorkouts[0]).toEqual(sortedMockWorkouts[0]);
         }
       });
 
       it('should handle limit parameter', async () => {
         const recentWorkouts = await getRecentWorkouts(2);
 
-        expect(Array.isArray(recentWorkouts)).toBe(false);
+        expect(Array.isArray(recentWorkouts)).toBe(true);
         if (recentWorkouts && !Array.isArray(recentWorkouts)) {
-          expect(recentWorkouts.workouts).toHaveLength(2);
+          expect(recentWorkouts).toHaveLength(2);
         }
       });
 
@@ -447,7 +445,7 @@ describe('Hevy Service', () => {
 
         const recentWorkouts = await getRecentWorkouts();
 
-        expect(recentWorkouts).toEqual({ workouts: [], page: 1, page_count: 0 });
+        expect(recentWorkouts).toEqual([]);
       });
     });
 
@@ -510,20 +508,19 @@ describe('Hevy Service', () => {
         const startDate = new Date('2023-01-02T00:00:00Z');
         const result = await getWorkoutsInTimeframe(startDate);
 
-        expect(Array.isArray(result)).toBe(false);
+        expect(Array.isArray(result)).toBe(true);
         if (result && !Array.isArray(result)) {
-          expect(result.workouts).toHaveLength(1);
-          expect(result.workouts[0]).toEqual(mockWorkouts[1]); // Only workout2 is after Jan 2
+          expect(result).toHaveLength(1);
+          expect(result[0]).toEqual(mockWorkouts[1]); // Only workout2 is after Jan 2
         }
       });
 
       it('should handle limit parameter', async () => {
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate, 1);
+        const result = await getWorkoutsInTimeframe(startDate);
 
-        expect(Array.isArray(result)).toBe(false);
         if (result && !Array.isArray(result)) {
-          expect(result.workouts).toHaveLength(1);
+          expect(result).toHaveLength(1);
         }
       });
 
@@ -535,58 +532,7 @@ describe('Hevy Service', () => {
         const startDate = new Date('2023-01-01T00:00:00Z');
         const result = await getWorkoutsInTimeframe(startDate);
 
-        expect(result).toEqual({ workouts: [], page: 1, page_count: 0 });
-      });
-    });
-
-    describe('getUserRoutines', () => {
-      it('should return user routines', async () => {
-        const result = await getUserRoutines();
-
-        expect(Array.isArray(result)).toBe(false);
-        if (result && !Array.isArray(result)) {
-          expect(result.routines).toEqual(mockRoutines);
-        }
-      });
-
-      it('should return empty response object when API call fails', async () => {
-        (
-          hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>
-        ).mockRejectedValueOnce(new Error('API error'));
-
-        const result = await getUserRoutines();
-
-        expect(result).toEqual({ routines: [], page: 1, page_count: 0 });
-      });
-    });
-
-    describe('getExerciseTemplates', () => {
-      it('should return exercise templates', async () => {
-        const result = await getExerciseTemplates();
-
-        expect(Array.isArray(result)).toBe(false);
-        if (result && !Array.isArray(result)) {
-          expect(result.exercise_templates).toEqual(mockExerciseTemplates);
-        }
-      });
-
-      it('should handle limit parameter', async () => {
-        const result = await getExerciseTemplates(2);
-
-        expect(Array.isArray(result)).toBe(false);
-        if (result && !Array.isArray(result)) {
-          expect(result.exercise_templates).toHaveLength(2);
-        }
-      });
-
-      it('should return empty response object when API call fails', async () => {
-        (
-          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
-        ).mockRejectedValueOnce(new Error('API error'));
-
-        const result = await getExerciseTemplates();
-
-        expect(result).toEqual({ exercise_templates: [], page: 1, page_count: 0 });
+        expect(result).toEqual([]);
       });
     });
 

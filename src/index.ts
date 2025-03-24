@@ -3,28 +3,14 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import hevyService from './services/hevyService.js';
 import { getDateRangeFromTimeframe } from './utils/dateUtils.js';
-
-// Define parameter types for tool handlers
-interface GetRecentWorkoutsParams {
-  limit: number;
-}
-
-interface GetWorkoutDetailsParams {
-  workoutId: string;
-}
-
-interface GetExerciseIdByNameParams {
-  searchTerm: string;
-}
-
-interface GetExerciseProgressParams {
-  exerciseId: string;
-  startDate: string;
-}
-
-interface AnalyzeWorkoutVolumeParams {
-  timeframe: 'week' | 'month' | 'quarter' | 'year';
-}
+import {
+  GetRecentWorkoutsParams,
+  GetWorkoutDetailsParams,
+  GetExerciseIdByNameParams,
+  GetExerciseProgressParams,
+  AnalyzeWorkoutVolumeParams,
+} from './types/ParamTypes.js';
+import { createErrorResponse, createSuccessResponse } from './utils/responseUtils.js';
 
 // Create server instance
 const server = new McpServer({
@@ -40,29 +26,14 @@ server.tool(
     limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve'),
   },
   async ({ limit }: GetRecentWorkoutsParams) => {
-    const workoutData = await hevyService.getRecentWorkouts(limit);
+    const workouts = await hevyService.getRecentWorkouts(limit);
 
-    if (!workoutData) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: false, message: 'Failed to retrieve workout data' }),
-          },
-        ],
-      };
+    if (!workouts) {
+      return createErrorResponse('Failed to retrieve workouts');
     }
 
-    const workouts = workoutData.workouts || [];
     if (workouts.length === 0) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: true, workouts: [] }),
-          },
-        ],
-      };
+      return createSuccessResponse({ workouts: [] });
     }
 
     // Format workout data with stats
@@ -85,14 +56,11 @@ server.tool(
       };
     });
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({ success: true, workouts: formattedWorkouts }),
-        },
-      ],
+    const response = {
+      workouts: formattedWorkouts,
     };
+
+    return createSuccessResponse(response);
   }
 );
 
@@ -106,17 +74,7 @@ server.tool(
     const workout = await hevyService.getWorkoutDetails(workoutId);
 
     if (!workout) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              message: `Failed to retrieve workout with ID: ${workoutId}`,
-            }),
-          },
-        ],
-      };
+      return createErrorResponse(`Failed to retrieve workout with ID: ${workoutId}`);
     }
 
     const stats = hevyService.calculateWorkoutStats(workout);
@@ -129,15 +87,7 @@ server.tool(
       totalVolume: stats.totalVolume,
       exercises: workout.exercises,
     };
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({ success: true, workout: workoutDetails }),
-        },
-      ],
-    };
+    return createSuccessResponse({ workout: workoutDetails });
   }
 );
 
@@ -156,34 +106,16 @@ server.tool(
     const exercise = await hevyService.getExerciseDetailsById(exerciseId);
 
     if (!exercise) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              message: `Failed to retrieve exercise with ID: ${exerciseId}`,
-            }),
-          },
-        ],
-      };
+      return createErrorResponse(`Failed to retrieve exercise with ID: ${exerciseId}`);
     }
 
     // Get all workouts since the start date
-    const workoutData = await hevyService.getWorkoutsInTimeframe(new Date(startDate));
+    const workouts = await hevyService.getWorkoutsInTimeframe(new Date(startDate));
 
-    if (!workoutData) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: false, message: 'Failed to retrieve workout data' }),
-          },
-        ],
-      };
+    if (!workouts) {
+      return createErrorResponse('Failed to retrieve workout data');
     }
 
-    const workouts = workoutData.workouts || [];
     const progress = hevyService.analyzeProgressForExercise(workouts, exerciseId);
 
     const latestProgress = progress[progress.length - 1];
@@ -192,21 +124,13 @@ server.tool(
     const sortedRecords = latestProgress.recordsByReps.sort((a, b) => a.reps - b.reps);
 
     const response = {
-      success: true,
       startDate,
       exercise,
       personalRecords: sortedRecords,
       sessions: progress,
     };
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response),
-        },
-      ],
-    };
+    return createSuccessResponse(response);
   }
 );
 
@@ -220,18 +144,8 @@ server.tool(
     // Get exercise details first
     const exercises = await hevyService.searchExerciseTemplatesByName(searchTerm);
 
-    if (!exercises) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              message: `Failed to retrieve exercises with search term: ${searchTerm}`,
-            }),
-          },
-        ],
-      };
+    if (exercises.length === 0) {
+      return createErrorResponse(`No exercises found matching: ${searchTerm}`);
     }
 
     const response = exercises.map((exercise) => ({
@@ -239,39 +153,38 @@ server.tool(
       name: exercise.title,
     }));
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(response),
-        },
-      ],
-    };
+    return createSuccessResponse(response);
   }
 );
+
+server.tool('get-exercise-ids-and-names', 'Get all exercise IDs and names', {}, async () => {
+  // Get exercise details first
+  const exercises = await hevyService.fetchAllExerciseTemplates();
+
+  if (!exercises) {
+    return createErrorResponse(`Failed to retrieve exercises`);
+  }
+
+  const response = exercises.map((exercise) => ({
+    id: exercise.id,
+    name: exercise.title,
+  }));
+
+  return createSuccessResponse(response);
+});
 
 server.tool('get-routines', "Get user's workout routines", {}, async () => {
   const routines = await hevyService.fetchAllRoutines();
 
   if (routines.length === 0) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({ success: false, message: 'Failed to retrieve routines' }),
-        },
-      ],
-    };
+    return createErrorResponse('Failed to retrieve routines');
   }
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({ success: true, routines }),
-      },
-    ],
+  const response = {
+    routines,
   };
+
+  return createSuccessResponse(response);
 });
 
 server.tool(
@@ -288,70 +201,36 @@ server.tool(
     const startDate = getDateRangeFromTimeframe(timeframe);
 
     // Get workouts in the timeframe
-    const workoutData = await hevyService.getWorkoutsInTimeframe(startDate, 100);
+    const workouts = await hevyService.getWorkoutsInTimeframe(startDate);
 
-    if (!workoutData) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: false, message: 'Failed to retrieve workout data' }),
-          },
-        ],
-      };
+    if (!workouts) {
+      return createErrorResponse('Failed to retrieve workout data');
     }
 
-    const workouts = workoutData.workouts ?? [];
-
     if (workouts.length === 0) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: true,
-              timeframe,
-              message: `No workouts found in the last ${timeframe}`,
-              volumeData: [],
-            }),
-          },
-        ],
-      };
+      return createSuccessResponse({
+        timeframe,
+        message: `No workouts found in the last ${timeframe}`,
+        volumeData: [],
+      });
     }
 
     // Get exercise templates to map IDs to muscle groups
-    const exerciseData = await hevyService.getExerciseTemplates(200);
+    const exerciseData = await hevyService.fetchAllExerciseTemplates();
 
-    if (!exerciseData || !exerciseData.exercise_templates) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({ success: false, message: 'Failed to retrieve exercise data' }),
-          },
-        ],
-      };
+    if (!exerciseData) {
+      return createErrorResponse('Failed to retrieve exercise data');
     }
 
     // Calculate volume by muscle group
-    const volumeData = hevyService.calculateVolumeByMuscleGroup(
-      workouts,
-      exerciseData.exercise_templates
-    );
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            timeframe,
-            totalWorkouts: workoutData.workouts.length,
-            volumeByMuscle: volumeData,
-          }),
-        },
-      ],
+    const volumeData = hevyService.calculateVolumeByMuscleGroup(workouts, exerciseData);
+    const response = {
+      timeframe,
+      totalWorkouts: workouts.length,
+      volumeByMuscle: volumeData,
     };
+
+    return createSuccessResponse(response);
   }
 );
 

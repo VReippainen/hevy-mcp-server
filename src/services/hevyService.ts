@@ -1,14 +1,7 @@
 /**
  * Hevy Service - Contains functions for processing and analyzing workout data
  */
-import {
-  Workout,
-  WorkoutResponse,
-  ExerciseTemplate,
-  ExerciseTemplateResponse,
-  RoutineResponse,
-  Routine,
-} from '../types/index.js';
+import { Workout, ExerciseTemplate, Routine } from '../types/index.js';
 import hevyApi from './hevyApi.js';
 
 /**
@@ -272,7 +265,7 @@ export async function fetchAllRoutines(): Promise<Routine[]> {
 /**
  * Get recent workouts for a user
  */
-export async function getRecentWorkouts(limit: number = 10): Promise<WorkoutResponse> {
+export async function getRecentWorkouts(limit: number = 10): Promise<Workout[]> {
   try {
     // Use fetchAllWorkouts instead to get all workouts, then take the most recent ones
     const allWorkouts = await fetchAllWorkouts();
@@ -285,14 +278,10 @@ export async function getRecentWorkouts(limit: number = 10): Promise<WorkoutResp
     // Take only the number requested
     const recentWorkouts = sortedWorkouts.slice(0, limit);
 
-    return {
-      workouts: recentWorkouts,
-      page: 1,
-      page_count: Math.ceil(allWorkouts.length / limit),
-    };
+    return recentWorkouts;
   } catch (error) {
     console.error('Error fetching recent workouts:', error);
-    return { workouts: [], page: 1, page_count: 0 };
+    return [];
   }
 }
 
@@ -348,10 +337,7 @@ export async function searchExerciseTemplatesByName(
 /**
  * Get workouts within a specific timeframe
  */
-export async function getWorkoutsInTimeframe(
-  startDate: Date,
-  limit: number = 1000
-): Promise<WorkoutResponse> {
+export async function getWorkoutsInTimeframe(startDate: Date): Promise<Workout[]> {
   try {
     // Get all workouts
     const allWorkouts = await fetchAllWorkouts();
@@ -362,61 +348,14 @@ export async function getWorkoutsInTimeframe(
     );
 
     // Sort by date descending (most recent first) and limit the results
-    const sortedWorkouts = [...filteredWorkouts]
-      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
-      .slice(0, limit);
+    const sortedWorkouts = [...filteredWorkouts].sort(
+      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+    );
 
-    return {
-      workouts: sortedWorkouts,
-      page: 1,
-      page_count: Math.ceil(filteredWorkouts.length / limit),
-    };
+    return sortedWorkouts;
   } catch (error) {
     console.error('Error fetching workouts in timeframe:', error);
-    return { workouts: [], page: 1, page_count: 0 };
-  }
-}
-
-/**
- * Get user routines
- */
-export async function getUserRoutines(): Promise<RoutineResponse> {
-  try {
-    // Get all routines
-    const routines = await fetchAllRoutines();
-
-    return {
-      routines,
-      page: 1,
-      page_count: Math.ceil(routines.length / 10),
-    };
-  } catch (error) {
-    console.error('Error fetching user routines:', error);
-    return { routines: [], page: 1, page_count: 0 };
-  }
-}
-
-/**
- * Get exercise templates
- */
-export async function getExerciseTemplates(
-  limit: number = 1000
-): Promise<ExerciseTemplateResponse> {
-  try {
-    // Get all exercise templates
-    const allExerciseTemplates = await fetchAllExerciseTemplates();
-
-    // Take only the number requested
-    const limitedExerciseTemplates = allExerciseTemplates.slice(0, limit);
-
-    return {
-      exercise_templates: limitedExerciseTemplates,
-      page: 1,
-      page_count: Math.ceil(allExerciseTemplates.length / limit),
-    };
-  } catch (error) {
-    console.error('Error fetching exercise templates:', error);
-    return { exercise_templates: [], page: 1, page_count: 0 };
+    return [];
   }
 }
 
@@ -531,7 +470,6 @@ export default {
   getWorkoutDetails,
   searchExerciseTemplatesByName,
   getWorkoutsInTimeframe,
-  getExerciseTemplates,
   calculateVolumeByMuscleGroup,
   analyzeMuscleGroupFrequency,
   getExerciseDetailsById,
