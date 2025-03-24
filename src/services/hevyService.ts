@@ -534,4 +534,5 @@ export default {
   getExerciseTemplates,
   calculateVolumeByMuscleGroup,
   analyzeMuscleGroupFrequency,
+  getExerciseDetailsById,
 };

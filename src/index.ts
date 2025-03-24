@@ -13,8 +13,12 @@ interface GetWorkoutDetailsParams {
   workoutId: string;
 }
 
-interface GetExerciseProgressParams {
+interface GetExerciseIdByNameParams {
   searchTerm: string;
+}
+
+interface GetExerciseProgressParams {
+  exerciseId: string;
   startDate: string;
 }
 
@@ -33,7 +37,7 @@ server.tool(
   'get-recent-workouts',
   "Get user's recent workouts",
   {
-    limit: z.number().min(1).max(1000).default(1000).describe('Number of workouts to retrieve'),
+    limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve'),
   },
   async ({ limit }: GetRecentWorkoutsParams) => {
     const workoutData = await hevyService.getRecentWorkouts(limit);
@@ -138,27 +142,27 @@ server.tool(
 );
 
 server.tool(
-  'get-exercise-progress',
-  'Get progress tracking for a specific exercise over time and all-time records',
+  'get-exercise-progress-by-id',
+  'Get progress tracking for a specific exercise over time and all-time records. Use get-exercise-id-by-name to get the exercise ID.',
   {
-    searchTerm: z.string().describe('Search exercises, which name contains the search term'),
+    exerciseId: z.string().describe('ID of the exercise to retrieve progress for'),
     startDate: z
       .string()
       .describe('ISO date string for the start date of the progress tracking')
       .default(new Date(0).toISOString()),
   },
-  async ({ searchTerm, startDate }: GetExerciseProgressParams) => {
+  async ({ exerciseId, startDate }: GetExerciseProgressParams) => {
     // Get exercise details first
-    const exercises = await hevyService.searchExerciseTemplatesByName(searchTerm);
+    const exercise = await hevyService.getExerciseDetailsById(exerciseId);
 
-    if (!exercises) {
+    if (!exercise) {
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
               success: false,
-              message: `Failed to retrieve exercises with search term: ${searchTerm}`,
+              message: `Failed to retrieve exercise with ID: ${exerciseId}`,
             }),
           },
         ],
@@ -180,30 +184,60 @@ server.tool(
     }
 
     const workouts = workoutData.workouts || [];
+    const progress = hevyService.analyzeProgressForExercise(workouts, exerciseId);
 
-    const progressByExercise = exercises.map((exercise) => {
+    const latestProgress = progress[progress.length - 1];
+
+    // Sort records by rep count for consistency
+    const sortedRecords = latestProgress.recordsByReps.sort((a, b) => a.reps - b.reps);
+
+    const response = {
+      success: true,
+      startDate,
+      exercise,
+      personalRecords: sortedRecords,
+      sessions: progress,
+    };
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response),
+        },
+      ],
+    };
+  }
+);
+
+server.tool(
+  'get-exercise-id-by-name',
+  'Get exercise ID by name',
+  {
+    searchTerm: z.string().describe('Search exercises, which name contains the search term'),
+  },
+  async ({ searchTerm }: GetExerciseIdByNameParams) => {
+    // Get exercise details first
+    const exercises = await hevyService.searchExerciseTemplatesByName(searchTerm);
+
+    if (!exercises) {
       return {
-        exercise,
-        progress: hevyService.analyzeProgressForExercise(workouts, exercise.id),
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              message: `Failed to retrieve exercises with search term: ${searchTerm}`,
+            }),
+          },
+        ],
       };
-    });
-    const response = progressByExercise
-      .filter(({ progress }) => progress.length > 0)
-      .map(({ exercise, progress }) => {
-        // Get the latest progress entry which contains all-time records
-        const latestProgress = progress[progress.length - 1];
+    }
 
-        // Sort records by rep count for consistency
-        const sortedRecords = latestProgress.recordsByReps.sort((a, b) => a.reps - b.reps);
-
-        return {
-          success: true,
-          startDate,
-          exercise,
-          personalRecords: sortedRecords,
-          //sessions: progress,
-        };
-      });
+    const response = exercises.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.title,
+    }));
 
     return {
       content: [
@@ -321,8 +355,17 @@ server.tool(
   }
 );
 
+async function populateCache() {
+  await Promise.all([
+    hevyService.fetchAllExerciseTemplates(),
+    hevyService.fetchAllRoutines(),
+    hevyService.fetchAllWorkouts(),
+  ]);
+}
+
 // Start the server
 async function main() {
+  await populateCache();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Hevy Trainer MCP Server running on stdio');
