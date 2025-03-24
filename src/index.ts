@@ -70,7 +70,14 @@ server.tool(
         date: new Date(workout.start_time).toISOString(),
         durationMinutes: stats.durationMinutes,
         totalVolume: stats.totalVolume,
-        exercises: workout.exercises,
+        exercises: workout.exercises.map((exercise) => ({
+          id: exercise.exercise_template_id,
+          name: exercise.title,
+          sets: exercise.sets.map((set) => ({
+            weight: set.weight_kg,
+            reps: set.reps,
+          })),
+        })),
       };
     });
 
@@ -132,10 +139,13 @@ server.tool(
 
 server.tool(
   'get-exercise-progress',
-  'Get progress tracking for a specific exercise over time',
+  'Get progress tracking for a specific exercise over time and all-time records',
   {
     searchTerm: z.string().describe('Search exercises, which name contains the search term'),
-    startDate: z.string().describe('ISO date string for the start date of the progress tracking'),
+    startDate: z
+      .string()
+      .describe('ISO date string for the start date of the progress tracking')
+      .default(new Date(0).toISOString()),
   },
   async ({ searchTerm, startDate }: GetExerciseProgressParams) => {
     // Get exercise details first
@@ -180,20 +190,18 @@ server.tool(
     const response = progressByExercise
       .filter(({ progress }) => progress.length > 0)
       .map(({ exercise, progress }) => {
-        const maxWeight = Math.max(...progress.map((d) => d.maxWeight));
-        const maxReps = Math.max(...progress.map((d) => d.maxReps));
-        const maxVolume = Math.max(...progress.map((d) => d.maxVolume));
+        // Get the latest progress entry which contains all-time records
+        const latestProgress = progress[progress.length - 1];
+
+        // Sort records by rep count for consistency
+        const sortedRecords = latestProgress.recordsByReps.sort((a, b) => a.reps - b.reps);
 
         return {
           success: true,
           startDate,
           exercise,
-          personalRecords: {
-            maxWeight,
-            maxReps,
-            maxVolume,
-          },
-          sessions: progress,
+          personalRecords: sortedRecords,
+          //sessions: progress,
         };
       });
 
