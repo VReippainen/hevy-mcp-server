@@ -1,7 +1,7 @@
 /**
  * Utility functions for request validation
  */
-import { PaginationParams } from '../types';
+import { PaginationParams } from '../types/index.js';
 
 /**
  * Validates page and pageSize parameters

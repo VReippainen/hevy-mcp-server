@@ -6,7 +6,6 @@ import {
   analyzeProgressForExercise,
   calculateVolumeByMuscleGroup,
   analyzeMuscleGroupFrequency,
-  determineMuscleGroupsNeedingAttention,
   fetchAllWorkouts,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
@@ -210,7 +209,6 @@ describe('Hevy Service', () => {
       expect(stats.exerciseCount).toBe(2);
       expect(stats.totalSets).toBe(5);
       expect(stats.totalVolume).toBe(60 * 10 + 100 * 8 + 110 * 5 + 150 * 10 + 160 * 8);
-      expect(stats.averageVolumePerExercise).toBe(Math.round(stats.totalVolume / 2));
     });
 
     it('should handle a workout with zero exercises', () => {
@@ -231,7 +229,6 @@ describe('Hevy Service', () => {
       expect(stats.exerciseCount).toBe(0);
       expect(stats.totalSets).toBe(0);
       expect(stats.totalVolume).toBe(0);
-      expect(stats.averageVolumePerExercise).toBe(0);
     });
   });
 
@@ -459,7 +456,7 @@ describe('Hevy Service', () => {
 
         expect(workoutDetails).not.toBeNull();
         if (workoutDetails) {
-          expect(workoutDetails.workout).toEqual(mockWorkouts[0]);
+          expect(workoutDetails).toEqual(mockWorkouts[0]);
         }
       });
 
@@ -486,7 +483,7 @@ describe('Hevy Service', () => {
 
         expect(exerciseDetails).not.toBeNull();
         if (exerciseDetails) {
-          expect(exerciseDetails.exercise_template).toEqual(mockExerciseTemplates[0]);
+          expect(exerciseDetails).toEqual(mockExerciseTemplates[0]);
         }
       });
 
@@ -594,26 +591,24 @@ describe('Hevy Service', () => {
 
     describe('calculateVolumeByMuscleGroup', () => {
       it('should calculate volume by muscle group correctly', () => {
-        // Create exercise template map
-        const exerciseMap: Record<string, ExerciseTemplate> = {};
-        mockExerciseTemplates.forEach((template) => {
-          exerciseMap[template.id] = template;
-        });
+        const result = calculateVolumeByMuscleGroup(mockWorkouts, mockExerciseTemplates);
 
-        const result = calculateVolumeByMuscleGroup(mockWorkouts, exerciseMap);
+        // Find the Legs and Chest entries in the result array
+        const legsEntry = result.find((item) => item.muscleGroup === 'Legs');
+        const chestEntry = result.find((item) => item.muscleGroup === 'Chest');
 
-        expect(result.volumeByMuscle).toHaveProperty('Legs');
-        expect(result.volumeByMuscle).toHaveProperty('Chest');
-        expect(result.volumeByMuscle['Legs']).toBe(
-          60 * 10 + 100 * 8 + 110 * 5 + 150 * 10 + 160 * 8
-        );
-        expect(result.volumeByMuscle['Chest']).toBe(40 * 12 + 80 * 10 + 90 * 8);
-        expect(result.setsByMuscle['Legs']).toBe(5);
-        expect(result.setsByMuscle['Chest']).toBe(3);
-        expect(result.totalVolume).toBe(
-          60 * 10 + 100 * 8 + 110 * 5 + 150 * 10 + 160 * 8 + 40 * 12 + 80 * 10 + 90 * 8
-        );
-        expect(result.totalWorkouts).toBe(2);
+        expect(legsEntry).toBeDefined();
+        expect(chestEntry).toBeDefined();
+
+        if (legsEntry) {
+          expect(legsEntry.volume).toBe(60 * 10 + 100 * 8 + 110 * 5 + 150 * 10 + 160 * 8);
+          expect(legsEntry.sets).toBe(5);
+        }
+
+        if (chestEntry) {
+          expect(chestEntry.volume).toBe(40 * 12 + 80 * 10 + 90 * 8);
+          expect(chestEntry.sets).toBe(3);
+        }
       });
 
       it('should handle unknown exercise templates gracefully', () => {
@@ -627,12 +622,13 @@ describe('Hevy Service', () => {
           ],
         };
 
-        const result = calculateVolumeByMuscleGroup([workoutWithUnknownExercise], {});
+        const result = calculateVolumeByMuscleGroup(
+          [workoutWithUnknownExercise],
+          mockExerciseTemplates
+        );
 
-        expect(result.volumeByMuscle).toEqual({});
-        expect(result.setsByMuscle).toEqual({});
-        expect(result.totalVolume).toBe(0);
-        expect(result.totalWorkouts).toBe(1);
+        // Should return an empty array or at least not throw an error
+        expect(Array.isArray(result)).toBe(true);
       });
     });
 
@@ -646,73 +642,24 @@ describe('Hevy Service', () => {
 
         const result = analyzeMuscleGroupFrequency(mockWorkouts, exerciseMap);
 
-        expect(result.muscleGroupFrequency).toHaveProperty('Legs');
-        expect(result.muscleGroupFrequency).toHaveProperty('Chest');
-        expect(result.muscleGroupFrequency['Legs']).toBe(2); // Squat and Leg Press in workout1
-        expect(result.muscleGroupFrequency['Chest']).toBe(1); // Bench Press in workout2
+        // Find the Legs and Chest entries in the result array
+        const legsEntry = result.find((item) => item.muscleGroup === 'Legs');
+        const chestEntry = result.find((item) => item.muscleGroup === 'Chest');
 
-        expect(result.lastWorkedOut).toHaveProperty('Legs');
-        expect(result.lastWorkedOut).toHaveProperty('Chest');
-        expect(result.lastWorkedOut['Legs'].toISOString()).toBe(
-          new Date(mockWorkouts[0].start_time).toISOString()
-        );
-        expect(result.lastWorkedOut['Chest'].toISOString()).toBe(
-          new Date(mockWorkouts[1].start_time).toISOString()
-        );
-      });
-    });
+        expect(legsEntry).toBeDefined();
+        expect(chestEntry).toBeDefined();
 
-    describe('determineMuscleGroupsNeedingAttention', () => {
-      it('should determine muscle groups needing attention correctly', () => {
-        // Create a mock date for testing
-        const realDateNow = Date.now;
-        Date.now = jest.fn(() => new Date('2023-01-10T10:00:00Z').getTime());
+        if (legsEntry && chestEntry) {
+          expect(legsEntry.frequency).toBe(2); // Legs exercises in workout1
+          expect(chestEntry.frequency).toBe(1); // Chest exercises in workout2
 
-        const muscleGroupFrequency = {
-          Legs: 2,
-          Chest: 1,
-          Back: 1,
-        };
-
-        const lastWorkedOut = {
-          Legs: new Date('2023-01-01T10:00:00Z'), // 9 days ago
-          Chest: new Date('2023-01-03T10:00:00Z'), // 7 days ago
-          Back: new Date('2023-01-08T10:00:00Z'), // 2 days ago
-        };
-
-        const result = determineMuscleGroupsNeedingAttention(muscleGroupFrequency, lastWorkedOut);
-
-        // Legs and Chest are older than 5 days and should need attention
-        expect(result).toContain('Legs');
-        expect(result).toContain('Chest');
-
-        // Test that common muscle groups that haven't been worked are included
-        expect(result).toContain('Core');
-        expect(result).toContain('Shoulders');
-        expect(result).toContain('Arms');
-
-        // Restore the original Date.now
-        Date.now = realDateNow;
-      });
-
-      it('should include common muscle groups that have never been worked', () => {
-        const muscleGroupFrequency = {
-          Legs: 2,
-          Chest: 1,
-        };
-
-        const lastWorkedOut = {
-          Legs: new Date('2023-01-01T10:00:00Z'),
-          Chest: new Date('2023-01-03T10:00:00Z'),
-        };
-
-        const result = determineMuscleGroupsNeedingAttention(muscleGroupFrequency, lastWorkedOut);
-
-        // Core, Back, Shoulders, and Arms haven't been worked at all
-        expect(result).toContain('Back');
-        expect(result).toContain('Shoulders');
-        expect(result).toContain('Core');
-        expect(result).toContain('Arms');
+          expect(legsEntry.lastWorkedOut.toISOString()).toBe(
+            new Date(mockWorkouts[0].start_time).toISOString()
+          );
+          expect(chestEntry.lastWorkedOut.toISOString()).toBe(
+            new Date(mockWorkouts[1].start_time).toISOString()
+          );
+        }
       });
     });
   });

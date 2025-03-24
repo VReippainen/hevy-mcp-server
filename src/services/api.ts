@@ -1,7 +1,7 @@
 /**
  * API service for making HTTP requests
  */
-import { QueryParams } from '../types/index';
+import { QueryParams } from '../types/index.js';
 
 /**
  * Makes a GET request to the specified URL with optional query parameters

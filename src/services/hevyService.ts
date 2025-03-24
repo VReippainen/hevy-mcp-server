@@ -8,8 +8,8 @@ import {
   ExerciseTemplateResponse,
   RoutineResponse,
   Routine,
-} from '../types';
-import hevyApi from './hevyApi';
+} from '../types/index.js';
+import hevyApi from './hevyApi.js';
 
 /**
  * Interface for exercise progress data
@@ -29,7 +29,6 @@ export interface WorkoutStats {
   exerciseCount: number;
   totalSets: number;
   totalVolume: number;
-  averageVolumePerExercise: number;
 }
 
 /**
@@ -60,7 +59,6 @@ export function calculateWorkoutStats(workout: Workout): WorkoutStats {
     exerciseCount,
     totalSets,
     totalVolume,
-    averageVolumePerExercise: exerciseCount > 0 ? Math.round(totalVolume / exerciseCount) : 0,
   };
 }
 
@@ -259,17 +257,12 @@ export async function getRecentWorkouts(
 export async function getWorkoutDetails(
   _token: string,
   workoutId: string
-): Promise<{ workout: Workout } | null> {
+): Promise<Workout | null> {
   try {
     // Get all workouts and find the one with the matching ID
     const allWorkouts = await fetchAllWorkouts(_token);
     const workout = allWorkouts.find((w) => w.id === workoutId);
-
-    if (!workout) {
-      return null;
-    }
-
-    return { workout };
+    return workout ?? null;
   } catch (error) {
     console.error(`Error fetching workout details for ID ${workoutId}:`, error);
     return null;
@@ -282,17 +275,12 @@ export async function getWorkoutDetails(
 export async function getExerciseDetails(
   _token: string,
   exerciseId: string
-): Promise<{ exercise_template: ExerciseTemplate } | null> {
+): Promise<ExerciseTemplate | null> {
   try {
     // Get all exercise templates and find the one with the matching ID
     const allExercises = await fetchAllExerciseTemplates(_token);
     const exercise = allExercises.find((e) => e.id === exerciseId);
-
-    if (!exercise) {
-      return null;
-    }
-
-    return { exercise_template: exercise };
+    return exercise ?? null;
   } catch (error) {
     console.error(`Error fetching exercise details for ID ${exerciseId}:`, error);
     return null;
@@ -381,21 +369,18 @@ export async function getExerciseTemplates(
  */
 export function calculateVolumeByMuscleGroup(
   workouts: Workout[],
-  exerciseMap: Record<string, ExerciseTemplate>
+  exercises: ExerciseTemplate[]
 ): {
-  volumeByMuscle: Record<string, number>;
-  setsByMuscle: Record<string, number>;
-  totalVolume: number;
-  totalWorkouts: number;
-} {
+  muscleGroup: string;
+  volume: number;
+  sets: number;
+}[] {
   const volumeByMuscle: Record<string, number> = {};
   const setsByMuscle: Record<string, number> = {};
-  let totalWorkouts = workouts.length;
-  let totalVolume = 0;
 
   for (const workout of workouts) {
     for (const exercise of workout.exercises) {
-      const template = exerciseMap[exercise.exercise_template_id];
+      const template = exercises.find((e) => e.id === exercise.exercise_template_id);
       if (!template) continue;
 
       const muscleGroup = template.primary_muscle_group;
@@ -409,7 +394,6 @@ export function calculateVolumeByMuscleGroup(
         if (set.weight_kg && set.reps) {
           const setVolume = set.weight_kg * set.reps;
           volumeByMuscle[muscleGroup] += setVolume;
-          totalVolume += setVolume;
           setsByMuscle[muscleGroup]++;
         } else {
           // Count the set even if it doesn't have weight/reps
@@ -419,12 +403,20 @@ export function calculateVolumeByMuscleGroup(
     }
   }
 
-  return {
-    volumeByMuscle,
-    setsByMuscle,
-    totalVolume,
-    totalWorkouts,
-  };
+  const sortedMuscles = Object.keys(volumeByMuscle).sort(
+    (a, b) => volumeByMuscle[b] - volumeByMuscle[a]
+  );
+
+  // Prepare volume data
+  const volumeData = sortedMuscles.map((muscle) => {
+    const volume = Math.round(volumeByMuscle[muscle]);
+    return {
+      muscleGroup: muscle,
+      volume,
+      sets: setsByMuscle[muscle],
+    };
+  });
+  return volumeData;
 }
 
 /**
@@ -434,9 +426,10 @@ export function analyzeMuscleGroupFrequency(
   workouts: Workout[],
   exerciseMap: Record<string, ExerciseTemplate>
 ): {
-  muscleGroupFrequency: Record<string, number>;
-  lastWorkedOut: Record<string, Date>;
-} {
+  muscleGroup: string;
+  frequency: number;
+  lastWorkedOut: Date;
+}[] {
   const muscleGroupFrequency: Record<string, number> = {};
   const lastWorkedOut: Record<string, Date> = {};
 
@@ -462,42 +455,14 @@ export function analyzeMuscleGroupFrequency(
     });
   });
 
-  return {
-    muscleGroupFrequency,
-    lastWorkedOut,
-  };
-}
+  // Convert to array of objects
+  const muscleGroups = Object.keys(muscleGroupFrequency).map((muscleGroup) => ({
+    muscleGroup,
+    frequency: muscleGroupFrequency[muscleGroup],
+    lastWorkedOut: lastWorkedOut[muscleGroup],
+  }));
 
-/**
- * Determine which muscle groups need attention
- */
-export function determineMuscleGroupsNeedingAttention(
-  muscleGroupFrequency: Record<string, number>,
-  lastWorkedOut: Record<string, Date>
-): string[] {
-  const now = new Date();
-  const needsAttention: string[] = [];
-
-  Object.keys(lastWorkedOut).forEach((muscle) => {
-    const daysSince = Math.floor(
-      (now.getTime() - lastWorkedOut[muscle].getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // If it's been more than 5 days or the frequency is low
-    if (daysSince > 5 || muscleGroupFrequency[muscle] <= 1) {
-      needsAttention.push(muscle);
-    }
-  });
-
-  // Find common muscle groups that haven't been worked at all
-  const commonGroups = ['Chest', 'Back', 'Legs', 'Shoulders', 'Core', 'Arms'];
-  const neglected = commonGroups.filter(
-    (group) => !Object.keys(muscleGroupFrequency).some((muscle) => muscle.includes(group))
-  );
-
-  needsAttention.push(...neglected);
-
-  return needsAttention;
+  return muscleGroups;
 }
 
 export default {
@@ -514,5 +479,4 @@ export default {
   getExerciseTemplates,
   calculateVolumeByMuscleGroup,
   analyzeMuscleGroupFrequency,
-  determineMuscleGroupsNeedingAttention,
 };

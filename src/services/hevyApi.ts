@@ -9,10 +9,9 @@ import {
   WorkoutResponse,
   PaginationParams,
   RoutineResponse,
-} from '../types/index';
-import { validatePagination } from '../utils/validation';
-import config from '../config';
-
+} from '../types/index.js';
+import config from '../config.js';
+import { validatePagination } from '../utils/index.js';
 /**
  * Headers required for Hevy API requests
  */
