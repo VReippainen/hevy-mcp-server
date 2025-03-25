@@ -43,16 +43,43 @@ async function fetchFromHevy<T>(endpoint: string, params: PaginationParams = {})
 }
 
 /**
+ * Base response type containing pagination information
+ */
+interface PaginatedResponse {
+  page: number;
+  pageCount: number;
+}
+
+/**
+ * Response type for workouts with pagination
+ */
+interface WorkoutsResponse extends PaginatedResponse {
+  workouts: Workout[];
+}
+
+/**
+ * Response type for routines with pagination
+ */
+interface RoutinesResponse extends PaginatedResponse {
+  routines: Routine[];
+}
+
+/**
+ * Response type for exercise templates with pagination
+ */
+interface ExercisesResponse extends PaginatedResponse {
+  exercises: ExerciseTemplate[];
+}
+
+/**
  * Get workouts from the Hevy API
  * @param {PaginationParams} [params={}] - Pagination parameters
  * @param {number} [params.page] - Page number (must be greater than 0)
  * @param {number} [params.pageSize] - Page size (must be between 1 and 10)
- * @returns {Promise<{workouts: Workout[], page: number, pageCount: number}>} - Promise resolving to workouts and pagination info
+ * @returns {Promise<WorkoutsResponse>} - Promise resolving to workouts and pagination info
  * @throws {Error} - If page or pageSize validation fails
  */
-export const getWorkouts = async (
-  params: PaginationParams = {}
-): Promise<{ workouts: Workout[]; page: number; pageCount: number }> => {
+export const getWorkouts = async (params: PaginationParams = {}): Promise<WorkoutsResponse> => {
   const data = await fetchFromHevy<WorkoutResponse>('workouts', params);
   return {
     workouts: data.workouts,
@@ -66,12 +93,10 @@ export const getWorkouts = async (
  * @param {PaginationParams} [params={}] - Pagination parameters
  * @param {number} [params.page] - Page number (must be greater than 0)
  * @param {number} [params.pageSize] - Page size (must be between 1 and 10)
- * @returns {Promise<{routines: Routine[], page: number, pageCount: number}>} - Promise resolving to routines and pagination info
+ * @returns {Promise<RoutinesResponse>} - Promise resolving to routines and pagination info
  * @throws {Error} - If page or pageSize validation fails
  */
-export const getRoutines = async (
-  params: PaginationParams = {}
-): Promise<{ routines: Routine[]; page: number; pageCount: number }> => {
+export const getRoutines = async (params: PaginationParams = {}): Promise<RoutinesResponse> => {
   const data = await fetchFromHevy<RoutineResponse>('routines', params);
   return {
     routines: data.routines || [],
@@ -85,12 +110,10 @@ export const getRoutines = async (
  * @param {PaginationParams} [params={}] - Pagination parameters
  * @param {number} [params.page] - Page number (must be greater than 0)
  * @param {number} [params.pageSize] - Page size (must be between 1 and 10)
- * @returns {Promise<{exercises: ExerciseTemplate[], page: number, pageCount: number}>} - Promise resolving to exercise templates and pagination info
+ * @returns {Promise<ExercisesResponse>} - Promise resolving to exercise templates and pagination info
  * @throws {Error} - If page or pageSize validation fails
  */
-export const getExercises = async (
-  params: PaginationParams = {}
-): Promise<{ exercises: ExerciseTemplate[]; page: number; pageCount: number }> => {
+export const getExercises = async (params: PaginationParams = {}): Promise<ExercisesResponse> => {
   const data = await fetchFromHevy<ExerciseTemplateResponse>('exercise_templates', params);
   return {
     exercises: data.exercise_templates,
