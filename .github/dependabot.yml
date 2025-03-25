@@ -9,7 +9,6 @@ updates:
     versioning-strategy: auto
     labels:
       - "dependencies"
-      - "npm"
     reviewers:
       - "VReippainen"
     commit-message:
@@ -31,7 +30,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "github-actions"
     reviewers:
       - "VReippainen"
     commit-message:
