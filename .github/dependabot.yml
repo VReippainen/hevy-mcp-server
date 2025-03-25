@@ -4,11 +4,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+    target-branch: "develop"
     open-pull-requests-limit: 10
     versioning-strategy: auto
     labels:
       - "dependencies"
-      - "npm"
     reviewers:
       - "VReippainen"
     commit-message:
@@ -26,10 +27,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "github-actions"
     reviewers:
       - "VReippainen"
     commit-message:
