@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    open-pull-requests-limit: 10
+    versioning-strategy: auto
+    labels:
+      - "dependencies"
+    reviewers:
+      - "VReippainen"
+    commit-message:
+      prefix: "npm"
+      include: "scope"
+    groups:
+      minor-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    reviewers:
+      - "VReippainen"
+    commit-message:
+      prefix: "github-actions"
+      include: "scope"
+    groups:
+      actions-minor-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch" 
