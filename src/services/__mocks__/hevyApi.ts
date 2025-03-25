@@ -1,6 +1,7 @@
 /**
  * Mock implementation of the HevyAPI module for testing
  */
+import { vi } from 'vitest';
 
 // Create mock workout data
 const mockWorkouts = [
@@ -55,19 +56,19 @@ const mockExercises = [
 ];
 
 // Mock API functions
-export const getWorkouts = jest.fn().mockResolvedValue({
+export const getWorkouts = vi.fn().mockResolvedValue({
   workouts: mockWorkouts,
   page: 1,
   pageCount: 1,
 });
 
-export const getRoutines = jest.fn().mockResolvedValue({
+export const getRoutines = vi.fn().mockResolvedValue({
   routines: mockRoutines,
   page: 1,
   pageCount: 1,
 });
 
-export const getExercises = jest.fn().mockResolvedValue({
+export const getExercises = vi.fn().mockResolvedValue({
   exercises: mockExercises,
   page: 1,
   pageCount: 1,

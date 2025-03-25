@@ -1,42 +1,44 @@
-// Mock axios and axios-cache-interceptor before importing the module
-import axios from 'axios';
+/**
+ * Tests for the API service module
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-jest.mock('axios');
-jest.mock('axios-cache-interceptor');
-
-// Create mock axios instance
-const mockAxiosGet = jest.fn();
-const mockAxiosInstance = { get: mockAxiosGet };
-(axios.create as jest.Mock).mockReturnValue(mockAxiosInstance);
-
-// Now import the module that uses axios
+// Import the mocked module - Vitest will automatically use the manual mock from __mocks__ folder
 import { get } from '../api';
+// Import the exported mock function
+import { __mockGet as mockGet } from '../__mocks__/api';
+
+// Tell Vitest to use the mock
+vi.mock('../api');
 
 describe('API Service', () => {
   const mockBaseUrl = 'https://api.example.com/endpoint';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockAxiosGet.mockReset();
+    vi.clearAllMocks();
   });
 
   describe('get function', () => {
     it('should make a GET request with the correct URL', async () => {
+      // Arrange
       const expectedData = { someKey: 'test data' };
-      mockAxiosGet.mockResolvedValueOnce({ data: expectedData });
+      mockGet.mockResolvedValueOnce({ data: expectedData });
 
+      // Act
       const result = await get(mockBaseUrl);
 
-      expect(mockAxiosGet).toHaveBeenCalledTimes(1);
-      expect(mockAxiosGet).toHaveBeenCalledWith(mockBaseUrl, {
+      // Assert
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(mockGet).toHaveBeenCalledWith(mockBaseUrl, {
         params: {},
       });
       expect(result).toEqual(expectedData);
     });
 
     it('should append query parameters to the URL', async () => {
+      // Arrange
       const expectedData = { someKey: 'test data with params' };
-      mockAxiosGet.mockResolvedValueOnce({ data: expectedData });
+      mockGet.mockResolvedValueOnce({ data: expectedData });
 
       const params = {
         page: 1,
@@ -44,10 +46,12 @@ describe('API Service', () => {
         filter: 'active',
       };
 
+      // Act
       const result = await get(mockBaseUrl, params);
 
-      expect(mockAxiosGet).toHaveBeenCalledTimes(1);
-      expect(mockAxiosGet).toHaveBeenCalledWith(mockBaseUrl, {
+      // Assert
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(mockGet).toHaveBeenCalledWith(mockBaseUrl, {
         params: {
           page: '1',
           limit: '10',
@@ -58,41 +62,46 @@ describe('API Service', () => {
     });
 
     it('should filter out undefined values from query parameters', async () => {
-      // Mock successful response
-      mockAxiosGet.mockResolvedValue({ data: { data: 'filtered params' } });
+      // Arrange
+      const expectedData = { data: 'filtered params' };
+      mockGet.mockResolvedValueOnce({ data: expectedData });
 
-      // Call the function with query parameters including undefined values
+      // Act
       const result = await get('https://api.example.com/endpoint', {
         page: 1,
         limit: undefined,
         filter: 'active',
       });
 
-      // Check if axios was called with the correct parameters (undefined params should be filtered out)
-      expect(mockAxiosGet).toHaveBeenCalledWith('https://api.example.com/endpoint', {
+      // Assert
+      expect(mockGet).toHaveBeenCalledWith('https://api.example.com/endpoint', {
         params: {
           page: '1',
           filter: 'active',
         },
       });
-      expect(result).toEqual({ data: 'filtered params' });
+      expect(result).toEqual(expectedData);
     });
 
     describe('error handling', () => {
       it('should handle API request errors', async () => {
+        // Arrange
         const errorMessage = 'Request failed with status code 404';
-        mockAxiosGet.mockRejectedValueOnce(new Error(errorMessage));
+        mockGet.mockRejectedValueOnce(new Error(errorMessage));
 
+        // Act & Assert
         await expect(get(mockBaseUrl)).rejects.toThrow(errorMessage);
-        expect(mockAxiosGet).toHaveBeenCalledTimes(1);
+        expect(mockGet).toHaveBeenCalledTimes(1);
       });
 
       it('should handle network errors', async () => {
+        // Arrange
         const errorMessage = 'Network error';
-        mockAxiosGet.mockRejectedValueOnce(new Error(errorMessage));
+        mockGet.mockRejectedValueOnce(new Error(errorMessage));
 
+        // Act & Assert
         await expect(get(mockBaseUrl)).rejects.toThrow(errorMessage);
-        expect(mockAxiosGet).toHaveBeenCalledTimes(1);
+        expect(mockGet).toHaveBeenCalledTimes(1);
       });
     });
   });

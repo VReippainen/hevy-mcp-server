@@ -1,22 +1,23 @@
 {
   "compilerOptions": {
-    "target": "ES2022",             // Upgraded from ES2020
-    "module": "NodeNext",           // Updated from CommonJS for better ESM compatibility
-    "lib": ["ES2022", "DOM"],       // Upgraded from ES2020
+    "target": "ES2022",
+    "module": "NodeNext",
+    "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "NodeNext", // Updated from "node"
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "sourceMap": true,
-    "declaration": true,            // Generates .d.ts files
-    //"noUncheckedIndexedAccess": true, // Additional type safety
-    "noImplicitOverride": true,     // Forces explicit override keyword
-    "allowJs": true,                // Allow JavaScript files to be compiled
-    "checkJs": true                 // Type checking for JS files
+    "declaration": true,
+    "noImplicitOverride": true,
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedModules": true,
+    "types": ["vitest/globals"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/__tests__/**", "**/*.test.ts", "**/*.spec.ts", "**/__mocks__/**"]

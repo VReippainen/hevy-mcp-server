@@ -31,6 +31,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
+    "inspect": "pnpm build && npx @modelcontextprotocol/inspector@latest node dist/index.js",
     "start": "node dist/index.js",
     "build": "tsc",
     "prepublishOnly": "pnpm build",
@@ -44,9 +45,9 @@
     "version:patch": "pnpm version patch",
     "version:minor": "pnpm version minor",
     "version:major": "pnpm version major",
-    "test": "jest --config=jest.config.js --silent",
-    "test:watch": "jest --watch --config=jest.config.cs --silent",
-    "test:coverage": "jest --coverage --config=jest.config.js",
+    "test": "vitest run --silent",
+    "test:watch": "vitest --silent",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\""
@@ -59,18 +60,17 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.14",
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
+    "@vitest/coverage-v8": "^1.6.1",
     "eslint": "^9.23.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",
     "eslint-plugin-unused-imports": "^4.1.4",
-    "jest": "^29.7.0",
     "prettier": "^3.5.3",
-    "ts-jest": "^29.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.1"
   }
 }

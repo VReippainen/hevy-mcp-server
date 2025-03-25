@@ -1,6 +1,7 @@
 /**
  * Unit tests for hevyService.ts
  */
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   calculateWorkoutStats,
   analyzeProgressForExercise,
@@ -19,7 +20,7 @@ import hevyApi from '../services/hevyApi';
 import { Workout, ExerciseTemplate, Routine } from '../types';
 
 // Mock the hevyApi module
-jest.mock('../services/hevyApi');
+vi.mock('../services/hevyApi');
 
 describe('Hevy Service', () => {
   // Mock data for tests
@@ -197,7 +198,11 @@ describe('Hevy Service', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('calculateWorkoutStats', () => {
@@ -236,7 +241,7 @@ describe('Hevy Service', () => {
       const exerciseId = 'exercise1';
 
       // Mock the API call
-      jest.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
+      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
         workouts: mockWorkouts,
         page: 1,
         pageCount: 1,
@@ -263,7 +268,7 @@ describe('Hevy Service', () => {
       const exerciseId = 'nonexistent';
 
       // Mock the API call
-      jest.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
+      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
         workouts: mockWorkouts,
         page: 1,
         pageCount: 1,
@@ -280,7 +285,7 @@ describe('Hevy Service', () => {
       const exerciseId = 'exercise1';
 
       // Mock the API call
-      jest.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
+      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
         workouts: mockWorkouts,
         page: 1,
         pageCount: 1,
@@ -314,21 +319,21 @@ describe('Hevy Service', () => {
   describe('API integration functions', () => {
     beforeEach(() => {
       // Mock the hevyApi.getWorkouts function
-      (hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+      (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
         workouts: mockWorkouts,
         page: 1,
         pageCount: 1,
       });
 
       // Mock the hevyApi.getExercises function
-      (hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+      (hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
         exercises: mockExerciseTemplates,
         page: 1,
         pageCount: 1,
       });
 
       // Mock the hevyApi.getRoutines function
-      (hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValue({
+      (hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValue({
         routines: mockRoutines,
         page: 1,
         pageCount: 1,
@@ -346,7 +351,7 @@ describe('Hevy Service', () => {
       it('should handle pagination when there are multiple pages', async () => {
         // Mock first page response
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockResolvedValueOnce({
           workouts: [mockWorkouts[0]],
           page: 1,
@@ -355,7 +360,7 @@ describe('Hevy Service', () => {
 
         // Mock second page response
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockResolvedValueOnce({
           workouts: [mockWorkouts[1]],
           page: 2,
@@ -373,7 +378,7 @@ describe('Hevy Service', () => {
 
       it('should return empty array when API call fails', async () => {
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const workouts = await fetchAllWorkouts();
@@ -393,7 +398,7 @@ describe('Hevy Service', () => {
       it('should handle pagination when there are multiple pages', async () => {
         // Mock first page response
         (
-          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
+          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
         ).mockResolvedValueOnce({
           exercises: [mockExerciseTemplates[0]],
           page: 1,
@@ -402,7 +407,7 @@ describe('Hevy Service', () => {
 
         // Mock second page response
         (
-          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
+          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
         ).mockResolvedValueOnce({
           exercises: [mockExerciseTemplates[1], mockExerciseTemplates[2]],
           page: 2,
@@ -418,7 +423,7 @@ describe('Hevy Service', () => {
 
       it('should return empty array when API call fails', async () => {
         (
-          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
+          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const exercises = await fetchAllExerciseTemplates();
@@ -438,7 +443,7 @@ describe('Hevy Service', () => {
       it('should handle pagination when there are multiple pages', async () => {
         // Mock first page response with pageCount = 2
         (
-          hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>
+          hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>
         ).mockResolvedValueOnce({
           routines: [mockRoutines[0]],
           page: 1,
@@ -447,7 +452,7 @@ describe('Hevy Service', () => {
 
         // Mock second page response
         (
-          hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>
+          hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>
         ).mockResolvedValueOnce({
           routines: [],
           page: 2,
@@ -462,7 +467,7 @@ describe('Hevy Service', () => {
 
       it('should return empty array when API call fails', async () => {
         (
-          hevyApi.getRoutines as jest.MockedFunction<typeof hevyApi.getRoutines>
+          hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const routines = await fetchAllRoutines();
@@ -500,7 +505,7 @@ describe('Hevy Service', () => {
 
       it('should return empty response object when API call fails', async () => {
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const recentWorkouts = await getRecentWorkouts();
@@ -527,7 +532,7 @@ describe('Hevy Service', () => {
 
       it('should return null when API call fails', async () => {
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const workoutDetails = await getWorkoutDetails('workout1');
@@ -554,7 +559,7 @@ describe('Hevy Service', () => {
 
       it('should return null when API call fails', async () => {
         (
-          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
+          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const exerciseDetails = await getExerciseById('exercise1');
@@ -586,7 +591,7 @@ describe('Hevy Service', () => {
 
       it('should return empty response object when API call fails', async () => {
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const startDate = new Date('2023-01-01T00:00:00Z');
@@ -626,7 +631,7 @@ describe('Hevy Service', () => {
 
       it('should return empty array when API call fails', async () => {
         (
-          hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
+          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const searchResults = await searchExercisesByName('Squat');
@@ -711,7 +716,7 @@ describe('Hevy Service', () => {
         const extendedMockWorkouts = [...mockWorkouts, workoutWithDuplicates];
 
         // Mock the API to return our extended workouts
-        (hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
           workouts: extendedMockWorkouts,
           page: 1,
           pageCount: 1,
@@ -763,7 +768,7 @@ describe('Hevy Service', () => {
         const extendedMockWorkouts = [...mockWorkouts, workoutWithUnknownExercise];
 
         // Mock the API to return our extended workouts
-        (hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
           workouts: extendedMockWorkouts,
           page: 1,
           pageCount: 1,
@@ -781,7 +786,7 @@ describe('Hevy Service', () => {
       it('should return empty array when API calls fail', async () => {
         // Mock API failure
         (
-          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
         ).mockRejectedValueOnce(new Error('API error'));
 
         const result = await getFavoriteExercises();

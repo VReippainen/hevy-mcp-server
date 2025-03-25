@@ -1,5 +1,6 @@
-// Directly tell Jest to use the mock module
-jest.mock('../hevyApi');
+// Directly tell Vitest to use the mock module
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+vi.mock('../hevyApi');
 
 // Import the module (this will use the manual mock from __mocks__ directory)
 import hevyApi, { getWorkouts, getRoutines, getExercises } from '../hevyApi';
@@ -7,7 +8,7 @@ import hevyApi, { getWorkouts, getRoutines, getExercises } from '../hevyApi';
 describe('HevyAPI Service', () => {
   beforeEach(() => {
     // Clear all mock calls
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getWorkouts function', () => {

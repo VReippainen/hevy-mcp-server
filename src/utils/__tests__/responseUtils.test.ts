@@ -1,4 +1,5 @@
 import { createErrorResponse, createResponse, createSuccessResponse } from '../responseUtils';
+import { describe, it, expect } from 'vitest';
 
 describe('Response Utilities', () => {
   describe('createResponse', () => {

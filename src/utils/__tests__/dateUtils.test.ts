@@ -1,4 +1,5 @@
 import { getDateRangeFromTimeframe } from '../dateUtils';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('dateUtils', () => {
   describe('getDateRangeFromTimeframe', () => {
@@ -18,7 +19,7 @@ describe('dateUtils', () => {
       } as DateConstructor;
 
       // Maintain original static methods
-      global.Date.now = jest.fn(() => FIXED_DATE.getTime());
+      global.Date.now = vi.fn(() => FIXED_DATE.getTime());
     });
 
     afterEach(() => {
