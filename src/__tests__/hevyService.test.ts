@@ -12,6 +12,7 @@ import {
   getWorkoutDetails,
   getExerciseById,
   searchExercisesByName,
+  getFavoriteExercises,
 } from '../services/hevyService';
 import hevyApi from '../services/hevyApi';
 import { Workout, ExerciseTemplate, Routine } from '../types';
@@ -570,6 +571,161 @@ describe('Hevy Service', () => {
         const searchResults = await searchExercisesByName('Squat');
 
         expect(searchResults).toHaveLength(0);
+      });
+    });
+
+    describe('getFavoriteExercises', () => {
+      it('should return exercises sorted by frequency', async () => {
+        // Our test data has:
+        // exercise1 (Squat) in workout1
+        // exercise2 (Leg Press) in workout1
+        // exercise3 (Bench Press) in workout2
+        // So exercise1 and exercise2 should have frequency 1, and exercise3 should have frequency 1
+
+        const result = await getFavoriteExercises();
+
+        expect(result).toHaveLength(3);
+        expect(result).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'exercise1', name: 'Squat', frequency: 1 }),
+            expect.objectContaining({ id: 'exercise2', name: 'Leg Press', frequency: 1 }),
+            expect.objectContaining({ id: 'exercise3', name: 'Bench Press', frequency: 1 }),
+          ])
+        );
+      });
+
+      it('should count each exercise once per workout', async () => {
+        // Mock a new workout with duplicated exercises
+        const workoutWithDuplicates: Workout = {
+          id: 'workout3',
+          title: 'Duplicate Exercises',
+          description: 'Multiple sets of the same exercise',
+          start_time: '2023-01-05T10:00:00Z',
+          end_time: '2023-01-05T11:00:00Z',
+          updated_at: '2023-01-05T11:00:00Z',
+          created_at: '2023-01-05T10:00:00Z',
+          exercises: [
+            {
+              index: 0,
+              title: 'Squat',
+              notes: 'First set',
+              exercise_template_id: 'exercise1',
+              superset_id: null,
+              sets: [
+                {
+                  index: 0,
+                  type: 'normal',
+                  weight_kg: 100,
+                  reps: 10,
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+              ],
+            },
+            {
+              index: 1,
+              title: 'Squat',
+              notes: 'Second set',
+              exercise_template_id: 'exercise1', // Same exercise again
+              superset_id: null,
+              sets: [
+                {
+                  index: 0,
+                  type: 'normal',
+                  weight_kg: 120,
+                  reps: 8,
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+              ],
+            },
+          ],
+        };
+
+        // Add the new workout to our mock data
+        const extendedMockWorkouts = [...mockWorkouts, workoutWithDuplicates];
+
+        // Mock the API to return our extended workouts
+        (hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: extendedMockWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        const result = await getFavoriteExercises();
+
+        // Squat should now have frequency 2 (once in workout1, once in workout3)
+        // even though it appears twice in workout3
+        const squatExercise = result.find((e) => e.id === 'exercise1');
+        expect(squatExercise).toBeDefined();
+        expect(squatExercise?.frequency).toBe(2);
+      });
+
+      it('should handle unknown exercise templates', async () => {
+        // Mock a workout with an unknown exercise ID
+        const workoutWithUnknownExercise: Workout = {
+          id: 'workout4',
+          title: 'Unknown Exercise',
+          description: 'Contains an unknown exercise',
+          start_time: '2023-01-06T10:00:00Z',
+          end_time: '2023-01-06T11:00:00Z',
+          updated_at: '2023-01-06T11:00:00Z',
+          created_at: '2023-01-06T10:00:00Z',
+          exercises: [
+            {
+              index: 0,
+              title: 'Unknown Exercise',
+              notes: '',
+              exercise_template_id: 'unknown_exercise_id',
+              superset_id: null,
+              sets: [
+                {
+                  index: 0,
+                  type: 'normal',
+                  weight_kg: 50,
+                  reps: 10,
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+              ],
+            },
+          ],
+        };
+
+        // Add the new workout to our mock data
+        const extendedMockWorkouts = [...mockWorkouts, workoutWithUnknownExercise];
+
+        // Mock the API to return our extended workouts
+        (hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: extendedMockWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        const result = await getFavoriteExercises();
+
+        // Should include the unknown exercise with "Unknown Exercise" as the name
+        const unknownExercise = result.find((e) => e.id === 'unknown_exercise_id');
+        expect(unknownExercise).toBeDefined();
+        expect(unknownExercise?.name).toBe('Unknown Exercise');
+        expect(unknownExercise?.frequency).toBe(1);
+      });
+
+      it('should return empty array when API calls fail', async () => {
+        // Mock API failure
+        (
+          hevyApi.getWorkouts as jest.MockedFunction<typeof hevyApi.getWorkouts>
+        ).mockRejectedValueOnce(new Error('API error'));
+
+        const result = await getFavoriteExercises();
+
+        expect(result).toEqual([]);
       });
     });
   });

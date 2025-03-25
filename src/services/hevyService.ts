@@ -338,6 +338,67 @@ export async function getWorkoutsInTimeframe(startDate: Date): Promise<Workout[]
   }
 }
 
+/**
+ * Get favorite exercises sorted by frequency of use
+ * @returns Array of objects containing exercise id, name and frequency
+ */
+export async function getFavoriteExercises() {
+  try {
+    // Get all workouts and exercise templates
+    const [allWorkouts, allExerciseTemplates] = await Promise.all([
+      fetchAllWorkouts(),
+      fetchAllExerciseTemplates(),
+    ]);
+
+    // Create a map to count exercise frequencies
+    const exerciseFrequency = new Map<string, number>();
+
+    // Count exercises across all workouts
+    for (const workout of allWorkouts) {
+      // Use a set to count each exercise only once per workout
+      const exercisesInWorkout = new Set<string>();
+
+      for (const exercise of workout.exercises) {
+        exercisesInWorkout.add(exercise.exercise_template_id);
+      }
+
+      // Increment the frequency for each unique exercise in this workout
+      for (const exerciseId of exercisesInWorkout) {
+        exerciseFrequency.set(exerciseId, (exerciseFrequency.get(exerciseId) || 0) + 1);
+      }
+    }
+
+    // Create result array with exercise details and frequency
+    const favoriteExercises = Array.from(exerciseFrequency.entries())
+      .map(([exerciseId, frequency]) => {
+        // Find the exercise template to get the name
+        const exerciseTemplate = allExerciseTemplates.find(
+          (template) => template.id === exerciseId
+        );
+        return {
+          id: exerciseId,
+          name: exerciseTemplate?.title || 'Unknown Exercise',
+          frequency,
+        };
+      })
+      // Sort by frequency in descending order
+      .sort((a, b) => b.frequency - a.frequency);
+
+    return favoriteExercises;
+  } catch (error) {
+    console.error('Error getting favorite exercises:', error);
+    return [];
+  }
+}
+
+/**
+ * Populate the cache with initial data
+ * Pre-fetches all exercise templates, routines, and workouts
+ */
+export async function populateCache(): Promise<void> {
+  await Promise.all([fetchAllExerciseTemplates(), fetchAllRoutines(), fetchAllWorkouts()]);
+}
+
 export default {
   calculateWorkoutStats,
   analyzeProgressForExercise,
@@ -349,4 +410,6 @@ export default {
   searchExercisesByName,
   getWorkoutsInTimeframe,
   getExerciseById,
+  getFavoriteExercises,
+  populateCache,
 };

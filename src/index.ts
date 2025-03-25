@@ -83,7 +83,7 @@ server.tool(
   },
   async ({ exerciseId, startDate }: GetExerciseProgressParams) => {
     // Get exercise details first
-    const exercise = await hevyService.getExerciseDetailsById(exerciseId);
+    const exercise = await hevyService.getExerciseById(exerciseId);
 
     if (!exercise) {
       return createErrorResponse(`Failed to retrieve exercise with ID: ${exerciseId}`);
@@ -122,7 +122,7 @@ server.tool(
   },
   async ({ searchTerm }: GetExerciseIdByNameParams) => {
     // Get exercise details first
-    const exercises = await hevyService.searchExerciseTemplatesByName(searchTerm);
+    const exercises = await hevyService.searchExercisesByName(searchTerm);
 
     if (exercises.length === 0) {
       return createErrorResponse(`No exercises found matching: ${searchTerm}`);
@@ -167,17 +167,31 @@ server.tool('get-routines', "Get user's workout routines", {}, async () => {
   return createSuccessResponse(response);
 });
 
-async function populateCache() {
-  await Promise.all([
-    hevyService.fetchAllExerciseTemplates(),
-    hevyService.fetchAllRoutines(),
-    hevyService.fetchAllWorkouts(),
-  ]);
-}
+server.tool(
+  'get-favorite-exercises',
+  "Get user's favorite exercises sorted by frequency",
+  {},
+  async () => {
+    try {
+      const favoriteExercises = await hevyService.getFavoriteExercises();
+
+      if (!favoriteExercises || favoriteExercises.length === 0) {
+        return createErrorResponse('No exercise data found');
+      }
+
+      return createSuccessResponse({
+        favoriteExercises,
+      });
+    } catch (error) {
+      console.error('Error in get-favorite-exercises:', error);
+      return createErrorResponse('Failed to retrieve favorite exercises');
+    }
+  }
+);
 
 // Start the server
 async function main() {
-  await populateCache();
+  await hevyService.populateCache();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Hevy Trainer MCP Server running on stdio');
