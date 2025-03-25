@@ -47,7 +47,7 @@
     "version:major": "pnpm version major",
     "test": "vitest run --silent",
     "test:watch": "vitest --silent",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --silent",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\""
@@ -63,7 +63,7 @@
     "@types/node": "^22.13.13",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
-    "@vitest/coverage-v8": "^1.6.1",
+    "@vitest/coverage-v8": "^3.0.9",
     "eslint": "^9.23.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",
@@ -71,6 +71,6 @@
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
-    "vitest": "^1.6.1"
+    "vitest": "^3.0.9"
   }
 }
