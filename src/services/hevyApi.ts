@@ -10,7 +10,7 @@ import {
   PaginationParams,
   RoutineResponse,
 } from '../types/index.js';
-import config from '../config.js';
+import { config } from '../config.js';
 import { get } from './api.js';
 import { validatePagination } from '../utils/validation.js';
 

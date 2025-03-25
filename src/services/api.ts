@@ -4,7 +4,7 @@
 import { QueryParams } from '../types/index.js';
 import axios from 'axios';
 import { setupCache, buildMemoryStorage } from 'axios-cache-interceptor';
-import config from '../config.js';
+import { config } from '../config.js';
 
 // Create a cached axios instance
 const axiosInstance = setupCache(
