@@ -1,4 +1,5 @@
 import { validatePagination } from '../validation';
+import { describe, it, expect } from 'vitest';
 
 describe('validation utilities', () => {
   describe('validatePagination', () => {

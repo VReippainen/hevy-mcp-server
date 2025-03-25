@@ -7,7 +7,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 export default [
   {
     // global ignores
-    ignores: ['node_modules/**', 'dist/**', '*.js', 'coverage/**'],
+    ignores: ['node_modules/**', 'dist/**', '*.js', 'coverage/**', 'vitest.config.ts'],
   },
   {
     files: ['**/*.ts'],
