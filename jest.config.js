@@ -23,4 +23,5 @@ export default {
     '!src/**/__tests__/**',
   ],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
 };
