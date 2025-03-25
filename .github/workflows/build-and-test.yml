@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version-file: '.nvmrc'  # Read Node version from .nvmrc file
           registry-url: 'https://registry.npmjs.org/'
       - name: Install pnpm
         uses: pnpm/action-setup@v3
