@@ -39,21 +39,21 @@ jobs:
           pnpm version:alpha
           pnpm publish:alpha
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NPM_TOKEN: ${{secrets.NPM_TOKEN}}
       - name: Publish beta from develop
         if: github.ref == 'refs/heads/develop'
         run: |
           pnpm version:beta
           pnpm publish:beta
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NPM_TOKEN: ${{secrets.NPM_TOKEN}}
       - name: Publish production from main
         if: github.ref == 'refs/heads/main'
         run: pnpm publish:prod
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NPM_TOKEN: ${{secrets.NPM_TOKEN}}
       - name: Publish from tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: pnpm publish:prod
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}} 
+          NPM_TOKEN: ${{secrets.NPM_TOKEN}} 
