@@ -15,12 +15,12 @@ import {
   searchExercisesByName,
   getFavoriteExercises,
   calculateRecordsByReps,
-} from '../services/hevyService';
-import hevyApi from '../services/hevyApi';
-import { Workout, ExerciseTemplate, Routine } from '../types';
+} from '../hevyService';
+import hevyApi from '../hevyApi';
+import { Workout, ExerciseTemplate, Routine } from '../../types';
 
 // Mock the hevyApi module
-vi.mock('../services/hevyApi');
+vi.mock('../hevyApi');
 
 describe('Hevy Service', () => {
   // Mock data for tests

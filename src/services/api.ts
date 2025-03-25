@@ -52,8 +52,3 @@ export const get = async <T = Record<string, unknown>>(
     throw error;
   }
 };
-
-export default {
-  get,
-  axiosInstance, // Export the axios instance in case it's needed elsewhere
-};
