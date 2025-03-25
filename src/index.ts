@@ -4,13 +4,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import hevyService from './services/hevyService.js';
-import { getDateRangeFromTimeframe } from './utils/dateUtils.js';
 import {
   GetRecentWorkoutsParams,
-  GetWorkoutDetailsParams,
   GetExerciseIdByNameParams,
   GetExerciseProgressParams,
-  AnalyzeWorkoutVolumeParams,
 } from './types/ParamTypes.js';
 import { createErrorResponse, createSuccessResponse } from './utils/responseUtils.js';
 import { readFileSync } from 'fs';
@@ -71,33 +68,6 @@ server.tool(
     };
 
     return createSuccessResponse(response);
-  }
-);
-
-server.tool(
-  'get-workout-details',
-  'Get detailed information about a specific workout',
-  {
-    workoutId: z.string().describe('ID of the workout to retrieve'),
-  },
-  async ({ workoutId }: GetWorkoutDetailsParams) => {
-    const workout = await hevyService.getWorkoutDetails(workoutId);
-
-    if (!workout) {
-      return createErrorResponse(`Failed to retrieve workout with ID: ${workoutId}`);
-    }
-
-    const stats = hevyService.calculateWorkoutStats(workout);
-
-    const workoutDetails = {
-      id: workout.id,
-      title: workout.title,
-      date: new Date(workout.start_time).toISOString(),
-      durationMinutes: stats.durationMinutes,
-      totalVolume: stats.totalVolume,
-      exercises: workout.exercises,
-    };
-    return createSuccessResponse({ workout: workoutDetails });
   }
 );
 
@@ -196,53 +166,6 @@ server.tool('get-routines', "Get user's workout routines", {}, async () => {
 
   return createSuccessResponse(response);
 });
-
-server.tool(
-  'analyze-workout-volume',
-  'Analyze workout volume by muscle group',
-  {
-    timeframe: z
-      .enum(['week', 'month', 'quarter', 'year'])
-      .default('week')
-      .describe('Timeframe for analysis'),
-  },
-  async ({ timeframe }: AnalyzeWorkoutVolumeParams) => {
-    // Determine date range based on timeframe
-    const startDate = getDateRangeFromTimeframe(timeframe);
-
-    // Get workouts in the timeframe
-    const workouts = await hevyService.getWorkoutsInTimeframe(startDate);
-
-    if (!workouts) {
-      return createErrorResponse('Failed to retrieve workout data');
-    }
-
-    if (workouts.length === 0) {
-      return createSuccessResponse({
-        timeframe,
-        message: `No workouts found in the last ${timeframe}`,
-        volumeData: [],
-      });
-    }
-
-    // Get exercise templates to map IDs to muscle groups
-    const exerciseData = await hevyService.fetchAllExerciseTemplates();
-
-    if (!exerciseData) {
-      return createErrorResponse('Failed to retrieve exercise data');
-    }
-
-    // Calculate volume by muscle group
-    const volumeData = hevyService.calculateVolumeByMuscleGroup(workouts, exerciseData);
-    const response = {
-      timeframe,
-      totalWorkouts: workouts.length,
-      volumeByMuscle: volumeData,
-    };
-
-    return createSuccessResponse(response);
-  }
-);
 
 async function populateCache() {
   await Promise.all([

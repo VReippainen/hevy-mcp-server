@@ -284,7 +284,7 @@ export async function getWorkoutDetails(workoutId: string): Promise<Workout | nu
 /**
  * Get exercise details by ID
  */
-export async function getExerciseDetailsById(exerciseId: string): Promise<ExerciseTemplate | null> {
+export async function getExerciseById(exerciseId: string): Promise<ExerciseTemplate | null> {
   try {
     // Get all exercise templates and find the one with the matching ID
     const allExercises = await fetchAllExerciseTemplates();
@@ -299,9 +299,7 @@ export async function getExerciseDetailsById(exerciseId: string): Promise<Exerci
 /**
  * Get exercise details by ID
  */
-export async function searchExerciseTemplatesByName(
-  searchTerm: string
-): Promise<ExerciseTemplate[]> {
+export async function searchExercisesByName(searchTerm: string): Promise<ExerciseTemplate[]> {
   try {
     // Get all exercise templates and find the one with the matching ID
     const allExercises = await fetchAllExerciseTemplates();
@@ -340,107 +338,6 @@ export async function getWorkoutsInTimeframe(startDate: Date): Promise<Workout[]
   }
 }
 
-/**
- * Calculate volume by muscle group
- */
-export function calculateVolumeByMuscleGroup(
-  workouts: Workout[],
-  exercises: ExerciseTemplate[]
-): {
-  muscleGroup: string;
-  volume: number;
-  sets: number;
-}[] {
-  const volumeByMuscle: Record<string, number> = {};
-  const setsByMuscle: Record<string, number> = {};
-
-  for (const workout of workouts) {
-    for (const exercise of workout.exercises) {
-      const template = exercises.find((e) => e.id === exercise.exercise_template_id);
-      if (!template) continue;
-
-      const muscleGroup = template.primary_muscle_group;
-      if (!volumeByMuscle[muscleGroup]) {
-        volumeByMuscle[muscleGroup] = 0;
-        setsByMuscle[muscleGroup] = 0;
-      }
-
-      // Calculate and add volume for this exercise
-      for (const set of exercise.sets) {
-        if (set.weight_kg && set.reps) {
-          const setVolume = set.weight_kg * set.reps;
-          volumeByMuscle[muscleGroup] += setVolume;
-          setsByMuscle[muscleGroup]++;
-        } else {
-          // Count the set even if it doesn't have weight/reps
-          setsByMuscle[muscleGroup]++;
-        }
-      }
-    }
-  }
-
-  const sortedMuscles = Object.keys(volumeByMuscle).sort(
-    (a, b) => volumeByMuscle[b] - volumeByMuscle[a]
-  );
-
-  // Prepare volume data
-  const volumeData = sortedMuscles.map((muscle) => {
-    const volume = Math.round(volumeByMuscle[muscle]);
-    return {
-      muscleGroup: muscle,
-      volume,
-      sets: setsByMuscle[muscle],
-    };
-  });
-  return volumeData;
-}
-
-/**
- * Analyze muscle group frequency and last workout dates
- */
-export function analyzeMuscleGroupFrequency(
-  workouts: Workout[],
-  exerciseMap: Record<string, ExerciseTemplate>
-): {
-  muscleGroup: string;
-  frequency: number;
-  lastWorkedOut: Date;
-}[] {
-  const muscleGroupFrequency: Record<string, number> = {};
-  const lastWorkedOut: Record<string, Date> = {};
-
-  workouts.forEach((workout) => {
-    const workoutDate = new Date(workout.start_time);
-
-    workout.exercises.forEach((exercise) => {
-      const template = exerciseMap[exercise.exercise_template_id];
-      if (!template) return;
-
-      const muscleGroup = template.primary_muscle_group;
-
-      // Count frequency
-      if (!muscleGroupFrequency[muscleGroup]) {
-        muscleGroupFrequency[muscleGroup] = 0;
-      }
-      muscleGroupFrequency[muscleGroup]++;
-
-      // Track last workout date
-      if (!lastWorkedOut[muscleGroup] || workoutDate > lastWorkedOut[muscleGroup]) {
-        lastWorkedOut[muscleGroup] = workoutDate;
-      }
-    });
-  });
-
-  // Convert to array of objects
-  const muscleGroups = Object.keys(muscleGroupFrequency).map((muscleGroup) => ({
-    muscleGroup,
-    frequency: muscleGroupFrequency[muscleGroup],
-    lastWorkedOut: lastWorkedOut[muscleGroup],
-  }));
-
-  return muscleGroups;
-}
-
 export default {
   calculateWorkoutStats,
   analyzeProgressForExercise,
@@ -449,9 +346,7 @@ export default {
   fetchAllRoutines,
   getRecentWorkouts,
   getWorkoutDetails,
-  searchExerciseTemplatesByName,
+  searchExercisesByName,
   getWorkoutsInTimeframe,
-  calculateVolumeByMuscleGroup,
-  analyzeMuscleGroupFrequency,
-  getExerciseDetailsById,
+  getExerciseById,
 };

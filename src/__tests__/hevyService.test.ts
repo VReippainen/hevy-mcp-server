@@ -4,16 +4,14 @@
 import {
   calculateWorkoutStats,
   analyzeProgressForExercise,
-  calculateVolumeByMuscleGroup,
-  analyzeMuscleGroupFrequency,
   fetchAllWorkouts,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
   getRecentWorkouts,
   getWorkoutsInTimeframe,
   getWorkoutDetails,
-  getExerciseDetailsById,
-  searchExerciseTemplatesByName,
+  getExerciseById,
+  searchExercisesByName,
 } from '../services/hevyService';
 import hevyApi from '../services/hevyApi';
 import { Workout, ExerciseTemplate, Routine } from '../types';
@@ -478,7 +476,7 @@ describe('Hevy Service', () => {
 
     describe('getExerciseDetailsById', () => {
       it('should return details for a specific exercise', async () => {
-        const exerciseDetails = await getExerciseDetailsById('exercise1');
+        const exerciseDetails = await getExerciseById('exercise1');
 
         expect(exerciseDetails).not.toBeNull();
         if (exerciseDetails) {
@@ -487,7 +485,7 @@ describe('Hevy Service', () => {
       });
 
       it('should return null if exercise not found', async () => {
-        const exerciseDetails = await getExerciseDetailsById('nonexistent');
+        const exerciseDetails = await getExerciseById('nonexistent');
 
         expect(exerciseDetails).toBeNull();
       });
@@ -497,7 +495,7 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const exerciseDetails = await getExerciseDetailsById('exercise1');
+        const exerciseDetails = await getExerciseById('exercise1');
 
         expect(exerciseDetails).toBeNull();
       });
@@ -538,28 +536,28 @@ describe('Hevy Service', () => {
 
     describe('searchExerciseTemplatesByName', () => {
       it('should return matching exercise templates', async () => {
-        const searchResults = await searchExerciseTemplatesByName('Squat');
+        const searchResults = await searchExercisesByName('Squat');
 
         expect(searchResults).toHaveLength(1);
         expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
       });
 
       it('should return multiple matching templates', async () => {
-        const searchResults = await searchExerciseTemplatesByName('Press');
+        const searchResults = await searchExercisesByName('Press');
 
         expect(searchResults).toHaveLength(2);
         expect(searchResults).toEqual([mockExerciseTemplates[1], mockExerciseTemplates[2]]);
       });
 
       it('should be case insensitive', async () => {
-        const searchResults = await searchExerciseTemplatesByName('squat');
+        const searchResults = await searchExercisesByName('squat');
 
         expect(searchResults).toHaveLength(1);
         expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
       });
 
       it('should return empty array when no matches found', async () => {
-        const searchResults = await searchExerciseTemplatesByName('NonexistentExercise');
+        const searchResults = await searchExercisesByName('NonexistentExercise');
 
         expect(searchResults).toHaveLength(0);
       });
@@ -569,83 +567,9 @@ describe('Hevy Service', () => {
           hevyApi.getExercises as jest.MockedFunction<typeof hevyApi.getExercises>
         ).mockRejectedValueOnce(new Error('API error'));
 
-        const searchResults = await searchExerciseTemplatesByName('Squat');
+        const searchResults = await searchExercisesByName('Squat');
 
         expect(searchResults).toHaveLength(0);
-      });
-    });
-
-    describe('calculateVolumeByMuscleGroup', () => {
-      it('should calculate volume by muscle group correctly', () => {
-        const result = calculateVolumeByMuscleGroup(mockWorkouts, mockExerciseTemplates);
-
-        // Find the Legs and Chest entries in the result array
-        const legsEntry = result.find((item) => item.muscleGroup === 'Legs');
-        const chestEntry = result.find((item) => item.muscleGroup === 'Chest');
-
-        expect(legsEntry).toBeDefined();
-        expect(chestEntry).toBeDefined();
-
-        if (legsEntry) {
-          expect(legsEntry.volume).toBe(60 * 10 + 100 * 8 + 110 * 5 + 150 * 10 + 160 * 8);
-          expect(legsEntry.sets).toBe(5);
-        }
-
-        if (chestEntry) {
-          expect(chestEntry.volume).toBe(40 * 12 + 80 * 10 + 90 * 8);
-          expect(chestEntry.sets).toBe(3);
-        }
-      });
-
-      it('should handle unknown exercise templates gracefully', () => {
-        const workoutWithUnknownExercise: Workout = {
-          ...mockWorkouts[0],
-          exercises: [
-            {
-              ...mockWorkouts[0].exercises[0],
-              exercise_template_id: 'unknown',
-            },
-          ],
-        };
-
-        const result = calculateVolumeByMuscleGroup(
-          [workoutWithUnknownExercise],
-          mockExerciseTemplates
-        );
-
-        // Should return an empty array or at least not throw an error
-        expect(Array.isArray(result)).toBe(true);
-      });
-    });
-
-    describe('analyzeMuscleGroupFrequency', () => {
-      it('should analyze muscle group frequency correctly', () => {
-        // Create exercise template map
-        const exerciseMap: Record<string, ExerciseTemplate> = {};
-        mockExerciseTemplates.forEach((template) => {
-          exerciseMap[template.id] = template;
-        });
-
-        const result = analyzeMuscleGroupFrequency(mockWorkouts, exerciseMap);
-
-        // Find the Legs and Chest entries in the result array
-        const legsEntry = result.find((item) => item.muscleGroup === 'Legs');
-        const chestEntry = result.find((item) => item.muscleGroup === 'Chest');
-
-        expect(legsEntry).toBeDefined();
-        expect(chestEntry).toBeDefined();
-
-        if (legsEntry && chestEntry) {
-          expect(legsEntry.frequency).toBe(2); // Legs exercises in workout1
-          expect(chestEntry.frequency).toBe(1); // Chest exercises in workout2
-
-          expect(legsEntry.lastWorkedOut.toISOString()).toBe(
-            new Date(mockWorkouts[0].start_time).toISOString()
-          );
-          expect(chestEntry.lastWorkedOut.toISOString()).toBe(
-            new Date(mockWorkouts[1].start_time).toISOString()
-          );
-        }
       });
     });
   });
