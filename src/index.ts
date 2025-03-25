@@ -76,12 +76,9 @@ server.tool(
   'Get progress tracking for a specific exercise over time and all-time records. Use get-exercise-id-by-name to get the exercise ID.',
   {
     exerciseId: z.string().describe('ID of the exercise to retrieve progress for'),
-    startDate: z
-      .string()
-      .describe('ISO date string for the start date of the progress tracking')
-      .default(new Date(0).toISOString()),
+    limit: z.number().min(0).max(10).default(10).describe('Number of latest workouts to retrieve'),
   },
-  async ({ exerciseId, startDate }: GetExerciseProgressParams) => {
+  async ({ exerciseId, limit }: GetExerciseProgressParams) => {
     // Get exercise details first
     const exercise = await hevyService.getExerciseById(exerciseId);
 
@@ -89,25 +86,15 @@ server.tool(
       return createErrorResponse(`Failed to retrieve exercise with ID: ${exerciseId}`);
     }
 
-    // Get all workouts since the start date
-    const workouts = await hevyService.getWorkoutsInTimeframe(new Date(startDate));
+    // Step 1: Get exercise progress data across workouts
+    const progress = await hevyService.analyzeProgressForExercise(exerciseId);
 
-    if (!workouts) {
-      return createErrorResponse('Failed to retrieve workout data');
-    }
-
-    const progress = hevyService.analyzeProgressForExercise(workouts, exerciseId);
-
-    const latestProgress = progress[progress.length - 1];
-
-    // Sort records by rep count for consistency
-    const sortedRecords = latestProgress.recordsByReps.sort((a, b) => a.reps - b.reps);
+    const personalRecords = hevyService.calculateRecordsByReps(progress);
 
     const response = {
-      startDate,
       exercise,
-      personalRecords: sortedRecords,
-      sessions: progress,
+      personalRecords,
+      sessions: progress.slice(0, limit),
     };
 
     return createSuccessResponse(response);

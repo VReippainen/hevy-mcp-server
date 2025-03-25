@@ -12,7 +12,7 @@ export interface GetExerciseIdByNameParams {
 
 export interface GetExerciseProgressParams {
   exerciseId: string;
-  startDate: string;
+  limit: number;
 }
 
 export interface AnalyzeWorkoutVolumeParams {

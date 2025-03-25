@@ -13,6 +13,7 @@ import {
   getExerciseById,
   searchExercisesByName,
   getFavoriteExercises,
+  calculateRecordsByReps,
 } from '../services/hevyService';
 import hevyApi from '../services/hevyApi';
 import { Workout, ExerciseTemplate, Routine } from '../types';
@@ -231,22 +232,82 @@ describe('Hevy Service', () => {
   });
 
   describe('analyzeProgressForExercise', () => {
-    it('should analyze progress for an exercise correctly', () => {
+    it('should analyze progress for an exercise correctly', async () => {
       const exerciseId = 'exercise1';
-      const progressData = analyzeProgressForExercise(mockWorkouts, exerciseId);
+
+      // Mock the API call
+      jest.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
+        workouts: mockWorkouts,
+        page: 1,
+        pageCount: 1,
+      });
+
+      const progressData = await analyzeProgressForExercise(exerciseId);
 
       expect(progressData).toHaveLength(1);
       expect(progressData[0].date).toBe(mockWorkouts[0].start_time);
-      expect(progressData[0].maxVolume).toBe(100 * 8); // The highest volume set (weight × reps)
-      expect(progressData[0].maxWeight).toBe(110); // The heaviest weight
-      expect(progressData[0].maxReps).toBe(8); // The most reps in a non-warmup set
+
+      // Check that sets are included correctly
+      expect(progressData[0].sets).toBeDefined();
+      expect(progressData[0].sets.length).toBe(mockWorkouts[0].exercises[0].sets.length);
+
+      // Check that a specific set is mapped correctly
+      const firstSet = progressData[0].sets[0];
+      expect(firstSet.index).toBe(mockWorkouts[0].exercises[0].sets[0].index);
+      expect(firstSet.type).toBe(mockWorkouts[0].exercises[0].sets[0].type);
+      expect(firstSet.weightKg).toBe(mockWorkouts[0].exercises[0].sets[0].weight_kg);
+      expect(firstSet.reps).toBe(mockWorkouts[0].exercises[0].sets[0].reps);
     });
 
-    it('should return empty array if no workouts have the specified exercise', () => {
+    it('should return empty array if no workouts have the specified exercise', async () => {
       const exerciseId = 'nonexistent';
-      const progressData = analyzeProgressForExercise(mockWorkouts, exerciseId);
+
+      // Mock the API call
+      jest.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
+        workouts: mockWorkouts,
+        page: 1,
+        pageCount: 1,
+      });
+
+      const progressData = await analyzeProgressForExercise(exerciseId);
 
       expect(progressData).toHaveLength(0);
+    });
+  });
+
+  describe('calculateRecordsByReps', () => {
+    it('should calculate records by reps correctly', async () => {
+      const exerciseId = 'exercise1';
+
+      // Mock the API call
+      jest.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
+        workouts: mockWorkouts,
+        page: 1,
+        pageCount: 1,
+      });
+
+      const progressData = await analyzeProgressForExercise(exerciseId);
+      const records = calculateRecordsByReps(progressData);
+
+      // Check that we have records
+      expect(records.length).toBeGreaterThan(0);
+
+      // Check records are sorted by reps
+      for (let i = 1; i < records.length; i++) {
+        expect(records[i].reps).toBeGreaterThan(records[i - 1].reps);
+      }
+
+      // Check that record values make sense
+      records.forEach((record) => {
+        expect(record.reps).toBeGreaterThan(0);
+        expect(record.weight_kg).toBeGreaterThan(0);
+        expect(typeof record.date).toBe('string');
+      });
+    });
+
+    it('should return empty array if no progress data', () => {
+      const records = calculateRecordsByReps([]);
+      expect(records).toHaveLength(0);
     });
   });
 

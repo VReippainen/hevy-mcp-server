@@ -3,12 +3,10 @@
  */
 export interface ExerciseProgressData {
   date: string;
-  maxVolume: number;
-  maxWeight: number;
-  maxReps: number;
-  recordsByReps: {
+  sets: {
+    index: number;
+    type: 'normal' | 'warmup' | 'dropset' | 'failure';
+    weightKg: number;
     reps: number;
-    weight_kg: number;
-    date: string;
   }[];
 }

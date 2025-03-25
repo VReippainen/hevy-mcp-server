@@ -44,79 +44,31 @@ export function calculateWorkoutStats(workout: Workout): WorkoutStats {
 /**
  * Analyze progress for a specific exercise across multiple workouts
  */
-export function analyzeProgressForExercise(
-  workouts: Workout[],
+export async function analyzeProgressForExercise(
   exerciseId: string
-): ExerciseProgressData[] {
-  const exerciseData: ExerciseProgressData[] = [];
+): Promise<ExerciseProgressData[]> {
+  const workouts = await fetchAllWorkouts();
+  // Use filter to get only workouts containing the exercise, then map to transform them
+  const exerciseDataFromWorkouts = workouts
+    .filter((workout) => workout.exercises.some((ex) => ex.exercise_template_id === exerciseId))
+    .map((workout) => {
+      const exercise = workout.exercises.find((ex) => ex.exercise_template_id === exerciseId)!;
 
-  // Track all-time best records for each rep count
-  const allTimeRepRecords = new Map<number, { weight_kg: number; date: string }>();
-
-  // First pass: collect all-time records
-  for (const workout of workouts) {
-    const exercise = workout.exercises.find((ex) => ex.exercise_template_id === exerciseId);
-    if (!exercise) continue;
-
-    for (const set of exercise.sets) {
-      // Skip warmup sets for PR calculations
-      if (set.type === 'warmup') continue;
-
-      // Update all-time records if this weight is heavier for this rep count
-      if (
-        !allTimeRepRecords.has(set.reps) ||
-        set.weight_kg > allTimeRepRecords.get(set.reps)!.weight_kg
-      ) {
-        allTimeRepRecords.set(set.reps, {
-          weight_kg: set.weight_kg,
-          date: workout.start_time,
-        });
-      }
-    }
-  }
-
-  // Second pass: collect per-workout data
-  for (const workout of workouts) {
-    const exercise = workout.exercises.find((ex) => ex.exercise_template_id === exerciseId);
-    if (!exercise) continue;
-
-    // Find the heaviest weight × reps for this exercise in this workout
-    let maxVolume = 0;
-    let maxWeight = 0;
-    let maxReps = 0;
-
-    for (const set of exercise.sets) {
-      // Skip warmup sets for PR calculations
-      if (set.type === 'warmup') continue;
-
-      const volume = set.weight_kg * set.reps;
-      if (volume > maxVolume) maxVolume = volume;
-      if (set.weight_kg > maxWeight) maxWeight = set.weight_kg;
-      if (set.reps > maxReps) maxReps = set.reps;
-    }
-
-    // Convert all-time records to array format
-    const recordsByReps = Array.from(allTimeRepRecords.entries())
-      .map(([reps, record]) => ({
-        reps,
-        weight_kg: record.weight_kg,
-        date: record.date,
-      }))
-      .sort((a, b) => a.reps - b.reps); // Sort by rep count for consistency
-
-    exerciseData.push({
-      date: workout.start_time,
-      maxVolume,
-      maxWeight,
-      maxReps,
-      recordsByReps,
+      return {
+        date: workout.start_time,
+        sets: exercise.sets.map((set) => ({
+          index: set.index,
+          type: set.type,
+          weightKg: set.weight_kg,
+          reps: set.reps,
+        })),
+      };
     });
-  }
 
   // Sort by date
-  exerciseData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  exerciseDataFromWorkouts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  return exerciseData;
+  return exerciseDataFromWorkouts;
 }
 
 /**
@@ -399,6 +351,49 @@ export async function populateCache(): Promise<void> {
   await Promise.all([fetchAllExerciseTemplates(), fetchAllRoutines(), fetchAllWorkouts()]);
 }
 
+/**
+ * Calculate records by reps from progress data
+ * @param progressData Array of exercise progress data
+ * @returns Records for each rep count
+ */
+export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
+  reps: number;
+  weight_kg: number;
+  date: string;
+}[] {
+  // Create a map to track best weight for each rep count
+  const recordsByReps = new Map<number, { weight_kg: number; date: string }>();
+
+  // Process all workout data
+  for (const workout of progressData) {
+    // Process each set to find PRs
+    for (const set of workout.sets) {
+      // Skip warmup sets for PR calculations
+      if (set.type === 'warmup') continue;
+
+      const repCount = set.reps;
+      const weight = set.weightKg;
+
+      // Update record if this weight is heavier for this rep count
+      if (!recordsByReps.has(repCount) || weight > recordsByReps.get(repCount)!.weight_kg) {
+        recordsByReps.set(repCount, {
+          weight_kg: weight,
+          date: workout.date,
+        });
+      }
+    }
+  }
+
+  // Convert to array format and sort by rep count
+  return Array.from(recordsByReps.entries())
+    .map(([reps, record]) => ({
+      reps,
+      weight_kg: record.weight_kg,
+      date: record.date,
+    }))
+    .sort((a, b) => a.reps - b.reps);
+}
+
 export default {
   calculateWorkoutStats,
   analyzeProgressForExercise,
@@ -412,4 +407,5 @@ export default {
   getExerciseById,
   getFavoriteExercises,
   populateCache,
+  calculateRecordsByReps,
 };
