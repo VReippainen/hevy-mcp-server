@@ -1,15 +1,6 @@
-name: Build, Test, and Publish Package
+name: Publish Package
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - develop
   workflow_dispatch:
     inputs:
       confirm_publish:
@@ -18,37 +9,10 @@ on:
         type: string
 
 jobs:
-  # Build and test job
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # This ensures we have the full git history
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
-          registry-url: 'https://registry.npmjs.org/'
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 'latest'
-          run_install: false
-      - name: Install dependencies
-        run: pnpm install
-      - name: Lint
-        run: pnpm lint
-      - name: Test
-        run: pnpm test
-      - name: Build
-        run: pnpm build
-
   # Manual publishing workflow
   publish:
     # This workflow is only triggered manually and confirmation is "yes"
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm_publish == 'yes'
+    if: github.event.inputs.confirm_publish == 'yes'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -69,6 +33,10 @@ jobs:
         run: pnpm install
       - name: Build
         run: pnpm build
+      - name: Test
+        run: pnpm test
+      - name: Lint
+        run: pnpm lint
       - name: Configure Git user
         run: |
           git config --global user.email "github-actions@github.com"
