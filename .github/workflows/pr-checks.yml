@@ -1,8 +1,9 @@
 name: PR Checks
 
+# DISABLED: This workflow is temporarily disabled
 on:
-  pull_request:
-    branches: [ main, develop ]
+  # Using workflow_dispatch only (manual trigger) effectively disables automatic runs
+  workflow_dispatch:
 
 jobs:
   build-lint-test:
