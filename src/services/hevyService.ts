@@ -1,33 +1,14 @@
 /**
  * Hevy Service - Contains functions for processing and analyzing workout data
  */
-import { Workout, ExerciseTemplate, Routine } from '../types/index.js';
+import {
+  Workout,
+  ExerciseTemplate,
+  Routine,
+  ExerciseProgressData,
+  WorkoutStats,
+} from '../types/index.js';
 import hevyApi from './hevyApi.js';
-
-/**
- * Interface for exercise progress data
- */
-export interface ExerciseProgressData {
-  date: string;
-  maxVolume: number;
-  maxWeight: number;
-  maxReps: number;
-  recordsByReps: {
-    reps: number;
-    weight_kg: number;
-    date: string;
-  }[];
-}
-
-/**
- * Interface for workout statistics
- */
-export interface WorkoutStats {
-  durationMinutes: number;
-  exerciseCount: number;
-  totalSets: number;
-  totalVolume: number;
-}
 
 /**
  * Calculate statistics for a workout
