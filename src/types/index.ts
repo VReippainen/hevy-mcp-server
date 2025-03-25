@@ -1,7 +1,10 @@
 /**
  * Types barrel file to simplify importing multiple types
  */
-export * from './QueryParams';
-export * from './Workout';
-export * from './Routine';
-export * from './Exercise';
+export * from './QueryParams.js';
+export * from './Workout.js';
+export * from './Routine.js';
+export * from './Exercise.js';
+export * from './ParamTypes.js';
+export * from './Progress.js';
+export * from './Stats.js';

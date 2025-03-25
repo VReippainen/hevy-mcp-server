@@ -1,10 +1,29 @@
 /**
- * API service for making HTTP requests
+ * API service for making HTTP requests with caching
  */
-import { QueryParams } from '../types/index';
+import { QueryParams } from '../types/index.js';
+import axios from 'axios';
+import { setupCache, buildMemoryStorage } from 'axios-cache-interceptor';
+import config from '../config.js';
+
+// Create a cached axios instance
+const axiosInstance = setupCache(
+  axios.create({
+    headers: {
+      'api-key': config.api.hevyApiKey,
+      'Content-Type': 'application/json',
+    },
+  }),
+  {
+    storage: buildMemoryStorage(),
+    ttl: 1000 * 60 * 5, // 5 minutes cache
+    methods: ['get'], // Only cache GET requests
+  }
+);
 
 /**
  * Makes a GET request to the specified URL with optional query parameters
+ * Results are cached for 5 minutes by default
  * @param {string} url - The base URL to fetch from
  * @param {QueryParams} [queryParams={}] - Optional query parameters as key-value pairs
  * @returns {Promise<T>} - The parsed JSON response
@@ -22,21 +41,12 @@ export const get = async <T = Record<string, unknown>>(
       }
     });
 
-    // Build query string from parameters
-    const queryString = Object.keys(filteredParams).length
-      ? '?' + new URLSearchParams(filteredParams).toString()
-      : '';
+    // Make the request using cached axios instance
+    const response = await axiosInstance.get<T>(url, {
+      params: filteredParams,
+    });
 
-    // Make the request
-    const response = await fetch(`${url}${queryString}`);
-
-    // Check if the request was successful
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    // Parse and return the JSON response
-    return (await response.json()) as T;
+    return response.data;
   } catch (error) {
     console.error('API request failed:', error);
     throw error;
@@ -45,4 +55,5 @@ export const get = async <T = Record<string, unknown>>(
 
 export default {
   get,
+  axiosInstance, // Export the axios instance in case it's needed elsewhere
 };
