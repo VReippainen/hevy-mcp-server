@@ -9,3 +9,12 @@ export interface Routine {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Interface for the response containing a list of routines from the Hevy API
+ */
+export interface RoutineResponse {
+  routines: Routine[];
+  page: number;
+  page_count: number;
+}
