@@ -11,11 +11,19 @@ import {
   AnalyzeWorkoutVolumeParams,
 } from './types/ParamTypes.js';
 import { createErrorResponse, createSuccessResponse } from './utils/responseUtils.js';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get package.json data
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
 // Create server instance
 const server = new McpServer({
-  name: 'hevy-trainer',
-  version: '1.0.0',
+  name: packageJson.name,
+  version: packageJson.version,
 });
 
 // Register workout tools

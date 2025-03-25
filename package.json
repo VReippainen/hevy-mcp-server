@@ -1,12 +1,48 @@
 {
-  "name": "hello-world-server",
-  "version": "1.0.0",
-  "description": "A simple hello world Node.js server",
+  "name": "hevy-mcp-server",
+  "version": "0.0.1",
+  "description": "A MCP server for Hevy",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VReippainen/hevy-mcp-server.git"
+  },
+  "keywords": [
+    "hevy",
+    "mcp",
+    "fitness",
+    "workout",
+    "model-context-protocol"
+  ],
+  "author": "Ville Reippainen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/VReippainen/hevy-mcp-server/issues"
+  },
+  "homepage": "https://github.com/VReippainen/hevy-mcp-server#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc",
+    "prepublishOnly": "pn run build",
+    "publish:prod": "pn run build && npm publish",
+    "publish:beta": "pn run build && npm publish --tag beta",
+    "publish:alpha": "pn run build && npm publish --tag alpha",
+    "publish:rc": "pn run build && npm publish --tag rc",
+    "version:beta": "npm version prerelease --preid=beta",
+    "version:alpha": "npm version prerelease --preid=alpha",
+    "version:rc": "npm version prerelease --preid=rc",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major",
     "test": "jest --config=jest.config.js",
     "test:watch": "jest --watch --config=jest.config.cs",
     "test:coverage": "jest --coverage --config=jest.config.js",
@@ -22,9 +58,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.26.9",
-    "@babel/preset-typescript": "^7.26.0",
-    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^8.27.0",
