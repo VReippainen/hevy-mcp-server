@@ -4,7 +4,7 @@
 import { QueryParams } from '../types/index.js';
 import axios from 'axios';
 import { setupCache, buildMemoryStorage } from 'axios-cache-interceptor';
-import config from '../config.js';
+import { config } from '../config.js';
 
 // Create a cached axios instance
 const axiosInstance = setupCache(
@@ -51,9 +51,4 @@ export const get = async <T = Record<string, unknown>>(
     console.error('API request failed:', error);
     throw error;
   }
-};
-
-export default {
-  get,
-  axiosInstance, // Export the axios instance in case it's needed elsewhere
 };

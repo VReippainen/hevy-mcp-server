@@ -83,6 +83,26 @@ pn build
 
 The server will be available at http://localhost:3000
 
+## Testing
+
+Run the test suite:
+
+```bash
+pn test
+```
+
+Run tests in watch mode during development:
+
+```bash
+pn test:watch
+```
+
+Generate test coverage report:
+
+```bash
+pn test:coverage
+```
+
 ## Testing the MCP Server
 
 After building the server, you can test it using the MCP Inspector tool:
