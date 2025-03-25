@@ -9,7 +9,7 @@ on:
       - 'v*'
   pull_request:
     branches:
-      - feature/*
+      - develop
 
 jobs:
   publish:
