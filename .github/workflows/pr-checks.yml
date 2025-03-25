@@ -24,13 +24,13 @@ jobs:
           run_install: false
       
       - name: Install dependencies
-        run: pn install
+        run: pnpm install
       
       - name: Lint
-        run: pn lint
+        run: pnpm lint
       
       - name: Build
-        run: pn build
+        run: pnpm build
       
       - name: Test
-        run: pn test 
+        run: pnpm test 
