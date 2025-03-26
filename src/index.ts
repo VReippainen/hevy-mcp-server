@@ -6,7 +6,6 @@ import { z } from 'zod';
 import hevyService from './services/hevyService.js';
 import {
   GetRecentWorkoutsParams,
-  GetExerciseIdByNameParams,
   GetExerciseProgressParams,
   GetExercisesParams,
 } from './types/ParamTypes.js';
@@ -131,45 +130,6 @@ server.tool(
   }
 );
 
-server.tool(
-  'get-exercise-id-by-name',
-  'Get exercise ID by name',
-  {
-    searchTerm: z.string().describe('Search exercises, which name contains the search term'),
-  },
-  async ({ searchTerm }: GetExerciseIdByNameParams) => {
-    // Get exercise details first
-    const exercises = await hevyService.searchExercisesByName(searchTerm);
-
-    if (exercises.length === 0) {
-      return createErrorResponse(`No exercises found matching: ${searchTerm}`);
-    }
-
-    const response = exercises.map((exercise) => ({
-      id: exercise.id,
-      name: exercise.title,
-    }));
-
-    return createSuccessResponse(response);
-  }
-);
-
-server.tool('get-exercise-ids-and-names', 'Get all exercise IDs and names', {}, async () => {
-  // Get exercise details first
-  const exercises = await hevyService.fetchAllExerciseTemplates();
-
-  if (!exercises) {
-    return createErrorResponse(`Failed to retrieve exercises`);
-  }
-
-  const response = exercises.map((exercise) => ({
-    id: exercise.id,
-    name: exercise.title,
-  }));
-
-  return createSuccessResponse(response);
-});
-
 server.tool('get-routines', "Get user's workout routines", {}, async () => {
   const routines = await hevyService.fetchAllRoutines();
 
@@ -183,36 +143,6 @@ server.tool('get-routines', "Get user's workout routines", {}, async () => {
 
   return createSuccessResponse(response);
 });
-
-server.tool(
-  'get-favorite-exercises',
-  "Get user's favorite exercises sorted by frequency",
-  {},
-  async () => {
-    try {
-      // Always exclude unused exercises for favorite exercises (frequency > 0)
-      const exercises = await hevyService.getExercises(undefined, true);
-
-      if (!exercises || exercises.length === 0) {
-        return createErrorResponse('No exercise data found');
-      }
-
-      // Convert to the expected format for backward compatibility
-      const favoriteExercises = exercises.map((exercise) => ({
-        id: exercise.id,
-        name: exercise.name,
-        frequency: exercise.frequency,
-      }));
-
-      return createSuccessResponse({
-        favoriteExercises,
-      });
-    } catch (error) {
-      console.error('Error in get-favorite-exercises:', error);
-      return createErrorResponse('Failed to retrieve favorite exercises');
-    }
-  }
-);
 
 // Start the server
 async function main() {
