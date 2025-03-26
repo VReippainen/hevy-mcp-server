@@ -269,17 +269,20 @@ export async function searchExercisesByName(searchTerm: string): Promise<Exercis
 /**
  * Get workouts within a specific timeframe
  */
-export async function getWorkoutsInTimeframe(startDate: Date): Promise<Workout[]> {
+export async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Workout[]> {
   try {
     // Get all workouts
     const allWorkouts = await fetchAllWorkouts();
 
-    // Filter workouts by start date
-    const filteredWorkouts = allWorkouts.filter(
-      (workout) => new Date(workout.start_time) >= startDate
-    );
+    // Filter workouts by both dates in a single pass
+    const filteredWorkouts = allWorkouts.filter((workout) => {
+      const workoutDate = new Date(workout.start_time);
+      const afterStartDate = !startDate || workoutDate >= startDate;
+      const beforeEndDate = !endDate || workoutDate <= endDate;
+      return afterStartDate && beforeEndDate;
+    });
 
-    // Sort by date descending (most recent first) and limit the results
+    // Sort by date descending (most recent first)
     const sortedWorkouts = [...filteredWorkouts].sort(
       (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
     );
@@ -345,21 +348,27 @@ export async function getFavoriteExercises() {
 }
 
 /**
- * Get all exercises with comprehensive data
+ * Get comprehensive exercise data sorted by frequency of use
  * @param {string} [searchTerm] - Optional search term to filter exercises by name
  * @param {boolean} [excludeUnused=false] - If true, exclude exercises with 0 frequency (never used)
+ * @param {string} [startDate] - Optional ISO date string to filter workouts after this date
+ * @param {string} [endDate] - Optional ISO date string to filter workouts before this date
  * @returns Array of objects containing exercise data, sorted by frequency
  */
-export async function getExercises(searchTerm?: string, excludeUnused: boolean = false) {
+export async function getExercises(
+  searchTerm?: string,
+  excludeUnused: boolean = false,
+  startDate?: string,
+  endDate?: string
+) {
   try {
-    // Get all workouts and exercise templates
-    const allWorkoutsPromise = fetchAllWorkouts();
-    const allExerciseTemplatesPromise = fetchAllExerciseTemplates();
-
-    // Wait for both promises to resolve or reject
-    const [allWorkouts, allExerciseTemplates] = await Promise.all([
-      allWorkoutsPromise,
-      allExerciseTemplatesPromise,
+    // Get all exercise templates and workouts (filtered by date if provided)
+    const [allExerciseTemplates, allWorkouts] = await Promise.all([
+      fetchAllExerciseTemplates(),
+      getWorkouts(
+        startDate ? new Date(startDate) : undefined,
+        endDate ? new Date(endDate) : undefined
+      ),
     ]);
 
     // If either API call returned empty arrays, return empty result
@@ -386,7 +395,7 @@ export async function getExercises(searchTerm?: string, excludeUnused: boolean =
     const exerciseFrequency = new Map<string, number>();
     const exerciseRecords = new Map<string, Map<number, { weight: number; date: string }>>();
 
-    // Count exercises across all workouts and track records
+    // Count exercises across filtered workouts and track records
     for (const workout of allWorkouts) {
       // Use a set to count each exercise only once per workout for frequency
       const exercisesInWorkout = new Set<string>();
@@ -562,13 +571,12 @@ export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
 export default {
   calculateWorkoutStats,
   analyzeProgressForExercise,
-  fetchAllWorkouts,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
   getRecentWorkouts,
   getWorkoutDetails,
   searchExercisesByName,
-  getWorkoutsInTimeframe,
+  getWorkouts,
   getExerciseById,
   getFavoriteExercises,
   populateCache,

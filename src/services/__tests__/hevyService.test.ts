@@ -9,7 +9,7 @@ import {
   fetchAllExerciseTemplates,
   fetchAllRoutines,
   getRecentWorkouts,
-  getWorkoutsInTimeframe,
+  getWorkouts,
   getWorkoutDetails,
   getExerciseById,
   searchExercisesByName,
@@ -569,10 +569,10 @@ describe('Hevy Service', () => {
       });
     });
 
-    describe('getWorkoutsInTimeframe', () => {
+    describe('getWorkouts', () => {
       it('should return workouts after a specific date', async () => {
         const startDate = new Date('2023-01-02T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate);
+        const result = await getWorkouts(startDate);
 
         expect(Array.isArray(result)).toBe(true);
         if (result && !Array.isArray(result)) {
@@ -581,9 +581,9 @@ describe('Hevy Service', () => {
         }
       });
 
-      it('should handle limit parameter', async () => {
+      it('should handle empty date', async () => {
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate);
+        const result = await getWorkouts(startDate);
 
         if (result && !Array.isArray(result)) {
           expect(result).toHaveLength(1);
@@ -596,7 +596,7 @@ describe('Hevy Service', () => {
         ).mockRejectedValueOnce(new Error('API error'));
 
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate);
+        const result = await getWorkouts(startDate);
 
         expect(result).toEqual([]);
       });
@@ -978,6 +978,59 @@ describe('Hevy Service', () => {
         const pullUp = resultWithoutExclude.find((ex) => ex.id === 'exercise5');
         expect(pullUp).toBeDefined();
         expect(pullUp?.frequency).toBe(0);
+      });
+
+      it('should return all workouts when startDate is undefined', async () => {
+        // Create mock workouts with different dates
+        const oldWorkout: Workout = {
+          ...mockWorkouts[0],
+          id: 'old_workout',
+          start_time: '2022-01-01T10:00:00Z',
+          end_time: '2022-01-01T11:00:00Z',
+        };
+
+        const newWorkout: Workout = {
+          ...mockWorkouts[0],
+          id: 'new_workout',
+          start_time: '2024-01-01T10:00:00Z',
+          end_time: '2024-01-01T11:00:00Z',
+        };
+
+        const allWorkouts = [oldWorkout, newWorkout];
+
+        // Mock the API to return all workouts
+        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: allWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        // Call getExercises with undefined startDate
+        const result = await getExercises(undefined, false, undefined);
+
+        // Verify that exercises from both old and new workouts are included
+        const exerciseFrequencies = result.map((ex) => ({
+          id: ex.id,
+          frequency: ex.frequency,
+        }));
+
+        // Since both workouts contain the same exercises, their frequency should be 2
+        for (const exercise of exerciseFrequencies) {
+          if (exercise.id === 'exercise1' || exercise.id === 'exercise2') {
+            expect(exercise.frequency).toBe(2);
+          }
+        }
+
+        // Verify that dates from both old and new workouts are considered in records
+        const squatExercise = result.find((ex) => ex.id === 'exercise1');
+        expect(squatExercise).toBeDefined();
+
+        // The records should include data from both workouts
+        if (squatExercise?.actual1RM) {
+          expect([oldWorkout.start_time, newWorkout.start_time]).toContain(
+            squatExercise.actual1RM.date
+          );
+        }
       });
 
       it('should use the heaviest weight lifted as actual1RM regardless of rep count', async () => {

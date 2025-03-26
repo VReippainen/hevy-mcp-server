@@ -111,10 +111,23 @@ server.tool(
       .optional()
       .default(true)
       .describe('If true, exclude exercises with zero frequency (never done)'),
+    startDate: z
+      .string()
+      .optional()
+      .describe('Optional: ISO date string to filter workouts after this date'),
+    endDate: z
+      .string()
+      .optional()
+      .describe('Optional: ISO date string to filter workouts before this date'),
   },
-  async ({ searchTerm, excludeUnused }: GetExercisesParams) => {
+  async ({ searchTerm, excludeUnused, startDate, endDate }: GetExercisesParams) => {
     try {
-      const exercises = await hevyService.getExercises(searchTerm, excludeUnused);
+      const exercises = await hevyService.getExercises(
+        searchTerm,
+        excludeUnused,
+        startDate,
+        endDate
+      );
 
       if (!exercises || exercises.length === 0) {
         return createErrorResponse(
