@@ -14,7 +14,7 @@ import { calculateEstimated1RM } from '../utils/oneRepMaxCalculator.js';
 /**
  * Calculate statistics for a workout
  */
-export function calculateWorkoutStats(workout: Workout): WorkoutStats {
+function calculateWorkoutStats(workout: Workout): WorkoutStats {
   // Calculate duration in minutes
   const startTime = new Date(workout.start_time).getTime();
   const endTime = new Date(workout.end_time).getTime();
@@ -45,7 +45,7 @@ export function calculateWorkoutStats(workout: Workout): WorkoutStats {
 /**
  * Analyze progress for a specific exercise across multiple workouts
  */
-export function analyzeProgressForExercise(
+function analyzeProgressForExercise(
   exerciseId: string,
   workouts: Workout[]
 ): ExerciseProgressData[] {
@@ -76,7 +76,7 @@ export function analyzeProgressForExercise(
  * Fetch all workouts by handling pagination
  * @returns Promise with array of all workouts
  */
-export async function fetchAllWorkouts(): Promise<Workout[]> {
+async function fetchAllWorkouts(): Promise<Workout[]> {
   try {
     const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
@@ -119,7 +119,7 @@ export async function fetchAllWorkouts(): Promise<Workout[]> {
  * Fetch all exercise templates by handling pagination
  * @returns Promise with array of all exercise templates
  */
-export async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
+async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
   try {
     const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
@@ -162,7 +162,7 @@ export async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
  * Fetch all routines by handling pagination
  * @returns Promise with array of all routines
  */
-export async function fetchAllRoutines(): Promise<Routine[]> {
+async function fetchAllRoutines(): Promise<Routine[]> {
   try {
     const MAX_PAGE_SIZE = 10;
 
@@ -199,7 +199,7 @@ export async function fetchAllRoutines(): Promise<Routine[]> {
 /**
  * Get workouts within a specific timeframe
  */
-export async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Workout[]> {
+async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Workout[]> {
   try {
     // Get all workouts
     const allWorkouts = await fetchAllWorkouts();
@@ -225,76 +225,6 @@ export async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Wor
 }
 
 /**
- * Search exercises by name
- */
-export async function searchExercisesByName(searchTerm: string): Promise<ExerciseTemplate[]> {
-  try {
-    // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates();
-    const exercises = allExercises.filter((e) =>
-      e.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    return exercises ?? [];
-  } catch (error) {
-    console.error(`Error fetching exercise details for search term ${searchTerm}:`, error);
-    return [];
-  }
-}
-
-/**
- * Get favorite exercises sorted by frequency of use
- * @returns Array of objects containing exercise id, name and frequency
- */
-export async function getFavoriteExercises() {
-  try {
-    // Get all workouts and exercise templates
-    const [allWorkouts, allExerciseTemplates] = await Promise.all([
-      fetchAllWorkouts(),
-      fetchAllExerciseTemplates(),
-    ]);
-
-    // Create a map to count exercise frequencies
-    const exerciseFrequency = new Map<string, number>();
-
-    // Count exercises across all workouts
-    for (const workout of allWorkouts) {
-      // Use a set to count each exercise only once per workout
-      const exercisesInWorkout = new Set<string>();
-
-      for (const exercise of workout.exercises) {
-        exercisesInWorkout.add(exercise.exercise_template_id);
-      }
-
-      // Increment the frequency for each unique exercise in this workout
-      for (const exerciseId of exercisesInWorkout) {
-        exerciseFrequency.set(exerciseId, (exerciseFrequency.get(exerciseId) || 0) + 1);
-      }
-    }
-
-    // Create result array with exercise details and frequency
-    const favoriteExercises = Array.from(exerciseFrequency.entries())
-      .map(([exerciseId, frequency]) => {
-        // Find the exercise template to get the name
-        const exerciseTemplate = allExerciseTemplates.find(
-          (template) => template.id === exerciseId
-        );
-        return {
-          id: exerciseId,
-          name: exerciseTemplate?.title || 'Unknown Exercise',
-          frequency,
-        };
-      })
-      // Sort by frequency in descending order
-      .sort((a, b) => b.frequency - a.frequency);
-
-    return favoriteExercises;
-  } catch (error) {
-    console.error('Error getting favorite exercises:', error);
-    return [];
-  }
-}
-
-/**
  * Get comprehensive exercise data sorted by frequency of use
  * @param {string} [searchTerm] - Optional search term to filter exercises by name
  * @param {boolean} [excludeUnused=false] - If true, exclude exercises with 0 frequency (never used)
@@ -302,7 +232,7 @@ export async function getFavoriteExercises() {
  * @param {string} [endDate] - Optional ISO date string to filter workouts before this date
  * @returns Array of objects containing exercise data, sorted by frequency
  */
-export async function getExercises(
+async function getExercises(
   searchTerm?: string,
   excludeUnused: boolean = false,
   startDate?: string,
@@ -468,7 +398,7 @@ export async function getExercises(
  * Populate the cache with initial data
  * Pre-fetches all exercise templates, routines, and workouts
  */
-export async function populateCache(): Promise<void> {
+async function populateCache(): Promise<void> {
   await Promise.all([fetchAllExerciseTemplates(), fetchAllRoutines(), fetchAllWorkouts()]);
 }
 
@@ -477,7 +407,7 @@ export async function populateCache(): Promise<void> {
  * @param progressData Array of exercise progress data
  * @returns Records for each rep count
  */
-export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
+function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
   reps: number;
   weight_kg: number;
   date: string;
@@ -523,11 +453,7 @@ export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
  * @param limit Number of latest sessions to return
  * @returns Progress data and records for the exercise
  */
-export function processExerciseProgress(
-  exercise: ExerciseTemplate,
-  workouts: Workout[],
-  limit: number
-) {
+function processExerciseProgress(exercise: ExerciseTemplate, workouts: Workout[], limit: number) {
   // Get progress data for this exercise
   const progress = analyzeProgressForExercise(exercise.id, workouts);
   const personalRecords = calculateRecordsByReps(progress);
@@ -545,6 +471,7 @@ export default {
   fetchAllExerciseTemplates,
   fetchAllRoutines,
   getWorkouts,
+  fetchAllWorkouts,
   populateCache,
   calculateRecordsByReps,
   getExercises,
