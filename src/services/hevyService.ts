@@ -368,7 +368,7 @@ export async function getExercises(searchTerm?: string) {
 
     // Create a map to count exercise frequencies and track max weights by rep
     const exerciseFrequency = new Map<string, number>();
-    const exerciseRecords = new Map<string, Map<number, number>>();
+    const exerciseRecords = new Map<string, Map<number, { weight: number; date: string }>>();
 
     // Count exercises across all workouts and track records
     for (const workout of allWorkouts) {
@@ -381,7 +381,7 @@ export async function getExercises(searchTerm?: string) {
 
         // Initialize records map for this exercise if it doesn't exist
         if (!exerciseRecords.has(exerciseId)) {
-          exerciseRecords.set(exerciseId, new Map<number, number>());
+          exerciseRecords.set(exerciseId, new Map<number, { weight: number; date: string }>());
         }
 
         // Track max weights by rep count
@@ -392,8 +392,12 @@ export async function getExercises(searchTerm?: string) {
           const weight = set.weight_kg;
           const recordsMap = exerciseRecords.get(exerciseId)!;
 
-          if (!recordsMap.has(repCount) || weight > recordsMap.get(repCount)!) {
-            recordsMap.set(repCount, weight);
+          // Update if no record exists for this rep count or if weight is higher
+          if (!recordsMap.has(repCount) || weight > recordsMap.get(repCount)!.weight) {
+            recordsMap.set(repCount, {
+              weight,
+              date: workout.start_time,
+            });
           }
         }
       }
@@ -405,33 +409,42 @@ export async function getExercises(searchTerm?: string) {
     }
 
     // Calculate estimated 1RM for each exercise using the utility function
-    const exerciseOneRepMax = new Map<string, number>();
+    const exerciseOneRepMax = new Map<string, { weightKg: number; date: string }>();
 
     exerciseRecords.forEach((records, exerciseId) => {
       let highestEstimatedOneRM: number | null = null;
+      let highestEstimatedDate: string | null = null;
 
       // Calculate 1RM for each rep/weight record and keep the highest valid estimate
-      records.forEach((weight, reps) => {
+      records.forEach(({ weight, date }, reps) => {
         // Use the utility function with default Brzycki formula
         const oneRM = calculateEstimated1RM(weight, reps);
 
         if (oneRM !== null && (highestEstimatedOneRM === null || oneRM > highestEstimatedOneRM)) {
           highestEstimatedOneRM = oneRM;
+          highestEstimatedDate = date;
         }
       });
 
-      if (highestEstimatedOneRM !== null) {
+      if (highestEstimatedOneRM !== null && highestEstimatedDate !== null) {
         // Round to 1 decimal place
-        exerciseOneRepMax.set(exerciseId, Math.round(highestEstimatedOneRM * 10) / 10);
+        exerciseOneRepMax.set(exerciseId, {
+          weightKg: Math.round(highestEstimatedOneRM * 10) / 10,
+          date: highestEstimatedDate,
+        });
       }
     });
 
     // Get actual 1RM (max weight lifted for 1 rep)
-    const exerciseActualOneRM = new Map<string, number>();
+    const exerciseActualOneRM = new Map<string, { weightKg: number; date: string }>();
 
     exerciseRecords.forEach((records, exerciseId) => {
       if (records.has(1)) {
-        exerciseActualOneRM.set(exerciseId, records.get(1)!);
+        const record = records.get(1)!;
+        exerciseActualOneRM.set(exerciseId, {
+          weightKg: record.weight,
+          date: record.date,
+        });
       }
     });
 

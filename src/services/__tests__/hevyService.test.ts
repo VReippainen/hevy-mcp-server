@@ -878,14 +878,25 @@ describe('Hevy Service', () => {
         expect(squat).toBeDefined();
         expect(squat?.name).toBe('Squat');
         expect(squat?.frequency).toBe(2); // Once in mockWorkouts, once in our new workout
-        expect(squat?.actual1RM).toBe(150); // From our 1RM set
+
+        // Check actual 1RM object structure
+        expect(squat?.actual1RM).toBeDefined();
+        expect(squat?.actual1RM).toHaveProperty('weightKg');
+        expect(squat?.actual1RM).toHaveProperty('date');
+        expect(squat?.actual1RM?.weightKg).toBe(150); // From our 1RM set
+        expect(squat?.actual1RM?.date).toBe(workoutWithOneRepMax.start_time);
 
         // Verify estimated 1RM is present and roughly matches expected calculation
         expect(squat?.estimated1RM).toBeDefined();
-        expect(typeof squat?.estimated1RM).toBe('number');
+        expect(squat?.estimated1RM).toHaveProperty('weightKg');
+        expect(squat?.estimated1RM).toHaveProperty('date');
+
         // The formula (weight * 36/(37-reps)) with weight=140, reps=3 should yield ~150
-        expect(squat?.estimated1RM).toBeGreaterThan(149);
-        expect(squat?.estimated1RM).toBeLessThan(151);
+        if (squat?.estimated1RM) {
+          expect(squat.estimated1RM.weightKg).toBeGreaterThan(149);
+          expect(squat.estimated1RM.weightKg).toBeLessThan(151);
+          expect(squat.estimated1RM.date).toBe(workoutWithOneRepMax.start_time);
+        }
 
         // Check other data is included
         expect(squat).toHaveProperty('type');
