@@ -5,9 +5,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import hevyService from './services/hevyService.js';
 import {
-  GetRecentWorkoutsParams,
-  GetExerciseProgressParams,
   GetExercisesParams,
+  GetWorkoutsParams,
+  GetExerciseProgressParams,
 } from './types/ParamTypes.js';
 import { createErrorResponse, createSuccessResponse } from './utils/responseUtils.js';
 import { readFileSync } from 'fs';
@@ -27,8 +27,8 @@ const server = new McpServer({
 
 // Register workout tools
 server.tool(
-  'get-recent-workouts',
-  "Get user's recent workouts",
+  'get-workouts',
+  'Get workouts between start and end dates. Returns all workouts if no dates are provided. Returns workouts in descending order of date and limits the number of workouts returned. Max 10 workouts.',
   {
     limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve'),
     startDate: z
@@ -40,7 +40,7 @@ server.tool(
       .optional()
       .describe('Optional: ISO date string to filter workouts before this date'),
   },
-  async ({ limit, startDate, endDate }: GetRecentWorkoutsParams) => {
+  async ({ limit, startDate, endDate }: GetWorkoutsParams) => {
     const workouts = await hevyService.getWorkouts(
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined
@@ -48,10 +48,6 @@ server.tool(
 
     if (!workouts) {
       return createErrorResponse('Failed to retrieve workouts');
-    }
-
-    if (workouts.length === 0) {
-      return createSuccessResponse({ workouts: [] });
     }
 
     // Format workout data with stats and limit the results
@@ -85,38 +81,49 @@ server.tool(
 );
 
 server.tool(
-  'get-exercise-progress-by-id',
-  'Get progress tracking for a specific exercise over time and all-time records.',
+  'get-exercise-progress-by-ids',
+  'Get progress for a specific exercises between start and end dates. Returns all workouts if no dates are provided. Returns workouts in descending order of date and limits the number of workouts returned. Max 10 workouts. Give exercise IDs as an array of strings.',
   {
-    exerciseId: z.string().describe('ID of the exercise to retrieve progress for'),
+    exerciseIds: z.array(z.string()).describe('IDs of the exercises to retrieve progress for'),
     limit: z.number().min(0).max(10).default(10).describe('Number of latest workouts to retrieve'),
+    startDate: z
+      .string()
+      .optional()
+      .describe('Optional: ISO date string to filter workouts after this date'),
+    endDate: z
+      .string()
+      .optional()
+      .describe('Optional: ISO date string to filter workouts before this date'),
   },
-  async ({ exerciseId, limit }: GetExerciseProgressParams) => {
-    // Get exercise details first
-    const exercise = await hevyService.getExerciseById(exerciseId);
+  async ({ exerciseIds, limit, startDate, endDate }: GetExerciseProgressParams) => {
+    try {
+      const [workouts, allExercises] = await Promise.all([
+        hevyService.getWorkouts(
+          startDate ? new Date(startDate) : undefined,
+          endDate ? new Date(endDate) : undefined
+        ),
+        hevyService.fetchAllExerciseTemplates(),
+      ]);
 
-    if (!exercise) {
-      return createErrorResponse(`Failed to retrieve exercise with ID: ${exerciseId}`);
+      // Get only relevant exercises
+      const exercises = allExercises.filter((exercise) => exerciseIds.includes(exercise.id));
+
+      // Get progress for each exercise
+      const exerciseProgress = exercises.map((exercise) =>
+        hevyService.processExerciseProgress(exercise, workouts, limit)
+      );
+
+      return createSuccessResponse({ exerciseProgress });
+    } catch (error) {
+      console.error('Error processing exercise progress:', error);
+      return createErrorResponse('Failed to process exercise progress data');
     }
-
-    // Step 1: Get exercise progress data across workouts
-    const progress = await hevyService.analyzeProgressForExercise(exerciseId);
-
-    const personalRecords = hevyService.calculateRecordsByReps(progress);
-
-    const response = {
-      exercise,
-      personalRecords,
-      sessions: progress.slice(0, limit),
-    };
-
-    return createSuccessResponse(response);
   }
 );
 
 server.tool(
   'get-exercises',
-  'Get comprehensive exercise data sorted by frequency of use',
+  'Get comprehensive exercise data sorted by frequency of use between start and end dates. Returns all exercises if no dates are provided. Returns exercises in descending order of frequency of use and limits the number of exercises returned. Give search term to filter exercises by name. Exclude unused exercises by default.',
   {
     searchTerm: z.string().optional().describe('Optional: Search term to filter exercises by name'),
     excludeUnused: z
@@ -142,7 +149,7 @@ server.tool(
         endDate
       );
 
-      if (!exercises || exercises.length === 0) {
+      if (!exercises?.length) {
         return createErrorResponse(
           searchTerm ? `No exercises found matching: ${searchTerm}` : 'No exercise data found'
         );
@@ -163,11 +170,7 @@ server.tool('get-routines', "Get user's workout routines", {}, async () => {
     return createErrorResponse('Failed to retrieve routines');
   }
 
-  const response = {
-    routines,
-  };
-
-  return createSuccessResponse(response);
+  return createSuccessResponse({ routines });
 });
 
 // Start the server

@@ -1,12 +1,14 @@
-export interface GetRecentWorkoutsParams {
+export interface GetWorkoutsParams {
   limit: number;
   startDate?: string;
   endDate?: string;
 }
 
 export interface GetExerciseProgressParams {
-  exerciseId: string;
+  exerciseIds: string[];
   limit: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface GetExercisesParams {

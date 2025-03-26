@@ -236,14 +236,7 @@ describe('Hevy Service', () => {
     it('should analyze progress for an exercise correctly', async () => {
       const exerciseId = 'exercise1';
 
-      // Mock the API call
-      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      const progressData = await analyzeProgressForExercise(exerciseId);
+      const progressData = await analyzeProgressForExercise(exerciseId, mockWorkouts);
 
       expect(progressData).toHaveLength(1);
       expect(progressData[0].date).toBe(mockWorkouts[0].start_time);
@@ -263,14 +256,7 @@ describe('Hevy Service', () => {
     it('should return empty array if no workouts have the specified exercise', async () => {
       const exerciseId = 'nonexistent';
 
-      // Mock the API call
-      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      const progressData = await analyzeProgressForExercise(exerciseId);
+      const progressData = analyzeProgressForExercise(exerciseId, mockWorkouts);
 
       expect(progressData).toHaveLength(0);
     });
@@ -280,14 +266,7 @@ describe('Hevy Service', () => {
     it('should calculate records by reps correctly', async () => {
       const exerciseId = 'exercise1';
 
-      // Mock the API call
-      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      const progressData = await analyzeProgressForExercise(exerciseId);
+      const progressData = analyzeProgressForExercise(exerciseId, mockWorkouts);
       const records = calculateRecordsByReps(progressData);
 
       // Check that we have records

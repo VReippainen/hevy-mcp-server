@@ -45,10 +45,10 @@ export function calculateWorkoutStats(workout: Workout): WorkoutStats {
 /**
  * Analyze progress for a specific exercise across multiple workouts
  */
-export async function analyzeProgressForExercise(
-  exerciseId: string
-): Promise<ExerciseProgressData[]> {
-  const workouts = await fetchAllWorkouts();
+export function analyzeProgressForExercise(
+  exerciseId: string,
+  workouts: Workout[]
+): ExerciseProgressData[] {
   // Use filter to get only workouts containing the exercise, then map to transform them
   const exerciseDataFromWorkouts = workouts
     .filter((workout) => workout.exercises.some((ex) => ex.exercise_template_id === exerciseId))
@@ -221,21 +221,6 @@ export async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Wor
   } catch (error) {
     console.error('Error fetching workouts in timeframe:', error);
     return [];
-  }
-}
-
-/**
- * Get exercise details by ID
- */
-export async function getExerciseById(exerciseId: string): Promise<ExerciseTemplate | null> {
-  try {
-    // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates();
-    const exercise = allExercises.find((e) => e.id === exerciseId);
-    return exercise ?? null;
-  } catch (error) {
-    console.error(`Error fetching exercise details for ID ${exerciseId}:`, error);
-    return null;
   }
 }
 
@@ -530,14 +515,38 @@ export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
     .sort((a, b) => a.reps - b.reps);
 }
 
+/**
+ * Process progress data for a single exercise
+ * @param exerciseId Exercise ID to analyze
+ * @param allExercises List of all exercise templates
+ * @param workouts List of all workouts
+ * @param limit Number of latest sessions to return
+ * @returns Progress data and records for the exercise
+ */
+export function processExerciseProgress(
+  exercise: ExerciseTemplate,
+  workouts: Workout[],
+  limit: number
+) {
+  // Get progress data for this exercise
+  const progress = analyzeProgressForExercise(exercise.id, workouts);
+  const personalRecords = calculateRecordsByReps(progress);
+
+  return {
+    exercise,
+    personalRecords,
+    sessions: progress.slice(0, limit),
+  };
+}
+
 export default {
   calculateWorkoutStats,
   analyzeProgressForExercise,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
   getWorkouts,
-  getExerciseById,
   populateCache,
   calculateRecordsByReps,
   getExercises,
+  processExerciseProgress,
 };
