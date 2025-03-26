@@ -884,8 +884,8 @@ describe('Hevy Service', () => {
         expect(squat?.estimated1RM).toBeDefined();
         expect(typeof squat?.estimated1RM).toBe('number');
         // The formula (weight * 36/(37-reps)) with weight=140, reps=3 should yield ~150
-        expect(squat?.estimated1RM).toBeGreaterThan(145);
-        expect(squat?.estimated1RM).toBeLessThan(155);
+        expect(squat?.estimated1RM).toBeGreaterThan(149);
+        expect(squat?.estimated1RM).toBeLessThan(151);
 
         // Check other data is included
         expect(squat).toHaveProperty('type');
