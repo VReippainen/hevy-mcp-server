@@ -9,11 +9,12 @@ import {
   WorkoutStats,
 } from '../types/index.js';
 import hevyApi from './hevyApi.js';
+import { calculateEstimated1RM } from '../utils/oneRepMaxCalculator.js';
 
 /**
  * Calculate statistics for a workout
  */
-export function calculateWorkoutStats(workout: Workout): WorkoutStats {
+function calculateWorkoutStats(workout: Workout): WorkoutStats {
   // Calculate duration in minutes
   const startTime = new Date(workout.start_time).getTime();
   const endTime = new Date(workout.end_time).getTime();
@@ -44,10 +45,10 @@ export function calculateWorkoutStats(workout: Workout): WorkoutStats {
 /**
  * Analyze progress for a specific exercise across multiple workouts
  */
-export async function analyzeProgressForExercise(
-  exerciseId: string
-): Promise<ExerciseProgressData[]> {
-  const workouts = await fetchAllWorkouts();
+function analyzeProgressForExercise(
+  exerciseId: string,
+  workouts: Workout[]
+): ExerciseProgressData[] {
   // Use filter to get only workouts containing the exercise, then map to transform them
   const exerciseDataFromWorkouts = workouts
     .filter((workout) => workout.exercises.some((ex) => ex.exercise_template_id === exerciseId))
@@ -75,7 +76,7 @@ export async function analyzeProgressForExercise(
  * Fetch all workouts by handling pagination
  * @returns Promise with array of all workouts
  */
-export async function fetchAllWorkouts(): Promise<Workout[]> {
+async function fetchAllWorkouts(): Promise<Workout[]> {
   try {
     const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
@@ -118,7 +119,7 @@ export async function fetchAllWorkouts(): Promise<Workout[]> {
  * Fetch all exercise templates by handling pagination
  * @returns Promise with array of all exercise templates
  */
-export async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
+async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
   try {
     const startTime = new Date();
     const MAX_PAGE_SIZE = 10;
@@ -161,7 +162,7 @@ export async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
  * Fetch all routines by handling pagination
  * @returns Promise with array of all routines
  */
-export async function fetchAllRoutines(): Promise<Routine[]> {
+async function fetchAllRoutines(): Promise<Routine[]> {
   try {
     const MAX_PAGE_SIZE = 10;
 
@@ -196,89 +197,22 @@ export async function fetchAllRoutines(): Promise<Routine[]> {
 }
 
 /**
- * Get recent workouts for a user
- */
-export async function getRecentWorkouts(limit: number = 10): Promise<Workout[]> {
-  try {
-    // Use fetchAllWorkouts instead to get all workouts, then take the most recent ones
-    const allWorkouts = await fetchAllWorkouts();
-
-    // Sort by start_time descending (most recent first)
-    const sortedWorkouts = [...allWorkouts].sort(
-      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    );
-
-    // Take only the number requested
-    const recentWorkouts = sortedWorkouts.slice(0, limit);
-
-    return recentWorkouts;
-  } catch (error) {
-    console.error('Error fetching recent workouts:', error);
-    return [];
-  }
-}
-
-/**
- * Get detailed information about a specific workout
- */
-export async function getWorkoutDetails(workoutId: string): Promise<Workout | null> {
-  try {
-    // Get all workouts and find the one with the matching ID
-    const allWorkouts = await fetchAllWorkouts();
-    const workout = allWorkouts.find((w) => w.id === workoutId);
-    return workout ?? null;
-  } catch (error) {
-    console.error(`Error fetching workout details for ID ${workoutId}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get exercise details by ID
- */
-export async function getExerciseById(exerciseId: string): Promise<ExerciseTemplate | null> {
-  try {
-    // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates();
-    const exercise = allExercises.find((e) => e.id === exerciseId);
-    return exercise ?? null;
-  } catch (error) {
-    console.error(`Error fetching exercise details for ID ${exerciseId}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get exercise details by ID
- */
-export async function searchExercisesByName(searchTerm: string): Promise<ExerciseTemplate[]> {
-  try {
-    // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates();
-    const exercises = allExercises.filter((e) =>
-      e.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    return exercises ?? [];
-  } catch (error) {
-    console.error(`Error fetching exercise details for search term ${searchTerm}:`, error);
-    return [];
-  }
-}
-
-/**
  * Get workouts within a specific timeframe
  */
-export async function getWorkoutsInTimeframe(startDate: Date): Promise<Workout[]> {
+async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Workout[]> {
   try {
     // Get all workouts
     const allWorkouts = await fetchAllWorkouts();
 
-    // Filter workouts by start date
-    const filteredWorkouts = allWorkouts.filter(
-      (workout) => new Date(workout.start_time) >= startDate
-    );
+    // Filter workouts by both dates in a single pass
+    const filteredWorkouts = allWorkouts.filter((workout) => {
+      const workoutDate = new Date(workout.start_time);
+      const afterStartDate = !startDate || workoutDate >= startDate;
+      const beforeEndDate = !endDate || workoutDate <= endDate;
+      return afterStartDate && beforeEndDate;
+    });
 
-    // Sort by date descending (most recent first) and limit the results
+    // Sort by date descending (most recent first)
     const sortedWorkouts = [...filteredWorkouts].sort(
       (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
     );
@@ -291,27 +225,87 @@ export async function getWorkoutsInTimeframe(startDate: Date): Promise<Workout[]
 }
 
 /**
- * Get favorite exercises sorted by frequency of use
- * @returns Array of objects containing exercise id, name and frequency
+ * Get comprehensive exercise data sorted by frequency of use
+ * @param {string} [searchTerm] - Optional search term to filter exercises by name
+ * @param {boolean} [excludeUnused=false] - If true, exclude exercises with 0 frequency (never used)
+ * @param {string} [startDate] - Optional ISO date string to filter workouts after this date
+ * @param {string} [endDate] - Optional ISO date string to filter workouts before this date
+ * @returns Array of objects containing exercise data, sorted by frequency
  */
-export async function getFavoriteExercises() {
+async function getExercises(
+  searchTerm?: string,
+  excludeUnused: boolean = false,
+  startDate?: string,
+  endDate?: string
+) {
   try {
-    // Get all workouts and exercise templates
-    const [allWorkouts, allExerciseTemplates] = await Promise.all([
-      fetchAllWorkouts(),
+    // Get all exercise templates and workouts (filtered by date if provided)
+    const [allExerciseTemplates, allWorkouts] = await Promise.all([
       fetchAllExerciseTemplates(),
+      getWorkouts(
+        startDate ? new Date(startDate) : undefined,
+        endDate ? new Date(endDate) : undefined
+      ),
     ]);
 
-    // Create a map to count exercise frequencies
-    const exerciseFrequency = new Map<string, number>();
+    // If either API call returned empty arrays, return empty result
+    if (!allWorkouts.length || !allExerciseTemplates.length) {
+      return [];
+    }
 
-    // Count exercises across all workouts
+    // Filter exercise templates by search term if provided (early filtering)
+    const filteredExerciseTemplates = searchTerm
+      ? allExerciseTemplates.filter((template) =>
+          template.title.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : allExerciseTemplates;
+
+    // If no matches found, return early
+    if (!filteredExerciseTemplates.length) {
+      return [];
+    }
+
+    // Create a map of exercise IDs for quick lookup of filtered exercises
+    const filteredExerciseIds = new Set(filteredExerciseTemplates.map((template) => template.id));
+
+    // Create a map to count exercise frequencies and track max weights by rep
+    const exerciseFrequency = new Map<string, number>();
+    const exerciseRecords = new Map<string, Map<number, { weight: number; date: string }>>();
+
+    // Count exercises across filtered workouts and track records
     for (const workout of allWorkouts) {
-      // Use a set to count each exercise only once per workout
+      // Use a set to count each exercise only once per workout for frequency
       const exercisesInWorkout = new Set<string>();
 
       for (const exercise of workout.exercises) {
-        exercisesInWorkout.add(exercise.exercise_template_id);
+        const exerciseId = exercise.exercise_template_id;
+
+        // Skip if not in our filtered set
+        if (!filteredExerciseIds.has(exerciseId)) continue;
+
+        exercisesInWorkout.add(exerciseId);
+
+        // Initialize records map for this exercise if it doesn't exist
+        if (!exerciseRecords.has(exerciseId)) {
+          exerciseRecords.set(exerciseId, new Map<number, { weight: number; date: string }>());
+        }
+
+        // Track max weights by rep count
+        for (const set of exercise.sets) {
+          if (set.type === 'warmup' || !set.weight_kg || !set.reps) continue;
+
+          const repCount = set.reps;
+          const weight = set.weight_kg;
+          const recordsMap = exerciseRecords.get(exerciseId)!;
+
+          // Update if no record exists for this rep count or if weight is higher
+          if (!recordsMap.has(repCount) || weight > recordsMap.get(repCount)!.weight) {
+            recordsMap.set(repCount, {
+              weight,
+              date: workout.start_time,
+            });
+          }
+        }
       }
 
       // Increment the frequency for each unique exercise in this workout
@@ -320,25 +314,82 @@ export async function getFavoriteExercises() {
       }
     }
 
-    // Create result array with exercise details and frequency
-    const favoriteExercises = Array.from(exerciseFrequency.entries())
-      .map(([exerciseId, frequency]) => {
-        // Find the exercise template to get the name
-        const exerciseTemplate = allExerciseTemplates.find(
-          (template) => template.id === exerciseId
-        );
-        return {
-          id: exerciseId,
-          name: exerciseTemplate?.title || 'Unknown Exercise',
-          frequency,
-        };
-      })
-      // Sort by frequency in descending order
-      .sort((a, b) => b.frequency - a.frequency);
+    // Calculate estimated 1RM for each exercise using the utility function
+    const exerciseOneRepMax = new Map<string, { weightKg: number; date: string }>();
 
-    return favoriteExercises;
+    exerciseRecords.forEach((records, exerciseId) => {
+      let highestEstimatedOneRM: number | null = null;
+      let highestEstimatedDate: string | null = null;
+
+      // Calculate 1RM for each rep/weight record and keep the highest valid estimate
+      records.forEach(({ weight, date }, reps) => {
+        // Use the utility function with default Brzycki formula
+        const oneRM = calculateEstimated1RM(weight, reps);
+
+        if (oneRM !== null && (highestEstimatedOneRM === null || oneRM > highestEstimatedOneRM)) {
+          highestEstimatedOneRM = oneRM;
+          highestEstimatedDate = date;
+        }
+      });
+
+      if (highestEstimatedOneRM !== null && highestEstimatedDate !== null) {
+        // Round to 1 decimal place
+        exerciseOneRepMax.set(exerciseId, {
+          weightKg: Math.round(highestEstimatedOneRM * 10) / 10,
+          date: highestEstimatedDate,
+        });
+      }
+    });
+
+    // Get actual 1RM (max weight lifted for 1 rep)
+    const exerciseActualOneRM = new Map<string, { weightKg: number; date: string }>();
+
+    exerciseRecords.forEach((records, exerciseId) => {
+      // Find the maximum weight lifted across all rep counts
+      let maxWeight = 0;
+      let maxWeightDate = '';
+
+      records.forEach(({ weight, date }) => {
+        if (weight > maxWeight) {
+          maxWeight = weight;
+          maxWeightDate = date;
+        }
+      });
+
+      if (maxWeight > 0) {
+        exerciseActualOneRM.set(exerciseId, {
+          weightKg: maxWeight,
+          date: maxWeightDate,
+        });
+      }
+    });
+
+    // Create result array with exercise details, frequency and 1RM data
+    let exerciseData = filteredExerciseTemplates.map((template) => {
+      return {
+        id: template.id,
+        name: template.title,
+        frequency: exerciseFrequency.get(template.id) || 0,
+        estimated1RM: exerciseOneRepMax.get(template.id) || null,
+        actual1RM: exerciseActualOneRM.get(template.id) || null,
+        type: template.type,
+        primary_muscle_group: template.primary_muscle_group,
+        secondary_muscle_groups: template.secondary_muscle_groups,
+        equipment: template.equipment,
+      };
+    });
+
+    // Filter out exercises with zero frequency if requested
+    if (excludeUnused) {
+      exerciseData = exerciseData.filter((exercise) => exercise.frequency > 0);
+    }
+
+    // Sort by frequency in descending order
+    exerciseData.sort((a, b) => b.frequency - a.frequency);
+
+    return exerciseData;
   } catch (error) {
-    console.error('Error getting favorite exercises:', error);
+    console.error('Error getting exercises data:', error);
     return [];
   }
 }
@@ -347,7 +398,7 @@ export async function getFavoriteExercises() {
  * Populate the cache with initial data
  * Pre-fetches all exercise templates, routines, and workouts
  */
-export async function populateCache(): Promise<void> {
+async function populateCache(): Promise<void> {
   await Promise.all([fetchAllExerciseTemplates(), fetchAllRoutines(), fetchAllWorkouts()]);
 }
 
@@ -356,7 +407,7 @@ export async function populateCache(): Promise<void> {
  * @param progressData Array of exercise progress data
  * @returns Records for each rep count
  */
-export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
+function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
   reps: number;
   weight_kg: number;
   date: string;
@@ -394,18 +445,35 @@ export function calculateRecordsByReps(progressData: ExerciseProgressData[]): {
     .sort((a, b) => a.reps - b.reps);
 }
 
+/**
+ * Process progress data for a single exercise
+ * @param exerciseId Exercise ID to analyze
+ * @param allExercises List of all exercise templates
+ * @param workouts List of all workouts
+ * @param limit Number of latest sessions to return
+ * @returns Progress data and records for the exercise
+ */
+function processExerciseProgress(exercise: ExerciseTemplate, workouts: Workout[], limit: number) {
+  // Get progress data for this exercise
+  const progress = analyzeProgressForExercise(exercise.id, workouts);
+  const personalRecords = calculateRecordsByReps(progress);
+
+  return {
+    exercise,
+    personalRecords,
+    sessions: progress.slice(0, limit),
+  };
+}
+
 export default {
   calculateWorkoutStats,
   analyzeProgressForExercise,
-  fetchAllWorkouts,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
-  getRecentWorkouts,
-  getWorkoutDetails,
-  searchExercisesByName,
-  getWorkoutsInTimeframe,
-  getExerciseById,
-  getFavoriteExercises,
+  getWorkouts,
+  fetchAllWorkouts,
   populateCache,
   calculateRecordsByReps,
+  getExercises,
+  processExerciseProgress,
 };

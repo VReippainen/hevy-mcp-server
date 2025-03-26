@@ -1,20 +1,19 @@
-export interface GetRecentWorkoutsParams {
+export interface GetWorkoutsParams {
   limit: number;
-}
-
-export interface GetWorkoutDetailsParams {
-  workoutId: string;
-}
-
-export interface GetExerciseIdByNameParams {
-  searchTerm: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface GetExerciseProgressParams {
-  exerciseId: string;
+  exerciseIds: string[];
   limit: number;
+  startDate?: string;
+  endDate?: string;
 }
 
-export interface AnalyzeWorkoutVolumeParams {
-  timeframe: 'week' | 'month' | 'quarter' | 'year';
+export interface GetExercisesParams {
+  searchTerm?: string;
+  excludeUnused?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
