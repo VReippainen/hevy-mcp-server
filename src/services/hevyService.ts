@@ -197,76 +197,6 @@ export async function fetchAllRoutines(): Promise<Routine[]> {
 }
 
 /**
- * Get recent workouts for a user
- */
-export async function getRecentWorkouts(limit: number = 10): Promise<Workout[]> {
-  try {
-    // Use fetchAllWorkouts instead to get all workouts, then take the most recent ones
-    const allWorkouts = await fetchAllWorkouts();
-
-    // Sort by start_time descending (most recent first)
-    const sortedWorkouts = [...allWorkouts].sort(
-      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    );
-
-    // Take only the number requested
-    const recentWorkouts = sortedWorkouts.slice(0, limit);
-
-    return recentWorkouts;
-  } catch (error) {
-    console.error('Error fetching recent workouts:', error);
-    return [];
-  }
-}
-
-/**
- * Get detailed information about a specific workout
- */
-export async function getWorkoutDetails(workoutId: string): Promise<Workout | null> {
-  try {
-    // Get all workouts and find the one with the matching ID
-    const allWorkouts = await fetchAllWorkouts();
-    const workout = allWorkouts.find((w) => w.id === workoutId);
-    return workout ?? null;
-  } catch (error) {
-    console.error(`Error fetching workout details for ID ${workoutId}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get exercise details by ID
- */
-export async function getExerciseById(exerciseId: string): Promise<ExerciseTemplate | null> {
-  try {
-    // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates();
-    const exercise = allExercises.find((e) => e.id === exerciseId);
-    return exercise ?? null;
-  } catch (error) {
-    console.error(`Error fetching exercise details for ID ${exerciseId}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get exercise details by ID
- */
-export async function searchExercisesByName(searchTerm: string): Promise<ExerciseTemplate[]> {
-  try {
-    // Get all exercise templates and find the one with the matching ID
-    const allExercises = await fetchAllExerciseTemplates();
-    const exercises = allExercises.filter((e) =>
-      e.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    return exercises ?? [];
-  } catch (error) {
-    console.error(`Error fetching exercise details for search term ${searchTerm}:`, error);
-    return [];
-  }
-}
-
-/**
  * Get workouts within a specific timeframe
  */
 export async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Workout[]> {
@@ -290,6 +220,38 @@ export async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Wor
     return sortedWorkouts;
   } catch (error) {
     console.error('Error fetching workouts in timeframe:', error);
+    return [];
+  }
+}
+
+/**
+ * Get exercise details by ID
+ */
+export async function getExerciseById(exerciseId: string): Promise<ExerciseTemplate | null> {
+  try {
+    // Get all exercise templates and find the one with the matching ID
+    const allExercises = await fetchAllExerciseTemplates();
+    const exercise = allExercises.find((e) => e.id === exerciseId);
+    return exercise ?? null;
+  } catch (error) {
+    console.error(`Error fetching exercise details for ID ${exerciseId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Search exercises by name
+ */
+export async function searchExercisesByName(searchTerm: string): Promise<ExerciseTemplate[]> {
+  try {
+    // Get all exercise templates and find the one with the matching ID
+    const allExercises = await fetchAllExerciseTemplates();
+    const exercises = allExercises.filter((e) =>
+      e.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return exercises ?? [];
+  } catch (error) {
+    console.error(`Error fetching exercise details for search term ${searchTerm}:`, error);
     return [];
   }
 }
@@ -573,12 +535,8 @@ export default {
   analyzeProgressForExercise,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
-  getRecentWorkouts,
-  getWorkoutDetails,
-  searchExercisesByName,
   getWorkouts,
   getExerciseById,
-  getFavoriteExercises,
   populateCache,
   calculateRecordsByReps,
   getExercises,

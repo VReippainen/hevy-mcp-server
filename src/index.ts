@@ -31,9 +31,20 @@ server.tool(
   "Get user's recent workouts",
   {
     limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve'),
+    startDate: z
+      .string()
+      .optional()
+      .describe('Optional: ISO date string to filter workouts after this date'),
+    endDate: z
+      .string()
+      .optional()
+      .describe('Optional: ISO date string to filter workouts before this date'),
   },
-  async ({ limit }: GetRecentWorkoutsParams) => {
-    const workouts = await hevyService.getRecentWorkouts(limit);
+  async ({ limit, startDate, endDate }: GetRecentWorkoutsParams) => {
+    const workouts = await hevyService.getWorkouts(
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined
+    );
 
     if (!workouts) {
       return createErrorResponse('Failed to retrieve workouts');
@@ -43,8 +54,8 @@ server.tool(
       return createSuccessResponse({ workouts: [] });
     }
 
-    // Format workout data with stats
-    const formattedWorkouts = workouts.map((workout) => {
+    // Format workout data with stats and limit the results
+    const formattedWorkouts = workouts.slice(0, limit).map((workout) => {
       const stats = hevyService.calculateWorkoutStats(workout);
       return {
         id: workout.id,
@@ -65,6 +76,8 @@ server.tool(
 
     const response = {
       workouts: formattedWorkouts,
+      totalWorkouts: workouts.length,
+      returnedWorkouts: formattedWorkouts.length,
     };
 
     return createSuccessResponse(response);
@@ -73,7 +86,7 @@ server.tool(
 
 server.tool(
   'get-exercise-progress-by-id',
-  'Get progress tracking for a specific exercise over time and all-time records. Use get-exercise-id-by-name to get the exercise ID.',
+  'Get progress tracking for a specific exercise over time and all-time records.',
   {
     exerciseId: z.string().describe('ID of the exercise to retrieve progress for'),
     limit: z.number().min(0).max(10).default(10).describe('Number of latest workouts to retrieve'),
