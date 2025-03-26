@@ -946,6 +946,98 @@ describe('Hevy Service', () => {
 
         expect(result).toEqual([]);
       });
+
+      it('should use the heaviest weight lifted as actual1RM regardless of rep count', async () => {
+        // Create a mock workout with a heavier weight at higher reps
+        const workoutWithHigherWeight: Workout = {
+          id: 'workout_higher_weight',
+          title: 'Heavy Weight Test',
+          description: 'Testing heavy weights at higher reps',
+          start_time: '2023-01-08T10:00:00Z',
+          end_time: '2023-01-08T11:00:00Z',
+          updated_at: '2023-01-08T11:00:00Z',
+          created_at: '2023-01-08T10:00:00Z',
+          exercises: [
+            {
+              index: 0,
+              title: 'Romanian Deadlift',
+              notes: 'Heavy set',
+              exercise_template_id: 'exercise4', // New exercise not in original mock data
+              superset_id: null,
+              sets: [
+                {
+                  index: 0,
+                  type: 'normal',
+                  weight_kg: 110, // Heavier weight
+                  reps: 8, // Higher rep count
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+                {
+                  index: 1,
+                  type: 'normal',
+                  weight_kg: 90,
+                  reps: 1, // 1RM at lower weight
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+              ],
+            },
+          ],
+        };
+
+        // Add a new exercise template for Romanian Deadlift
+        const extendedTemplates = [
+          ...mockExerciseTemplates,
+          {
+            id: 'exercise4',
+            title: 'Romanian Deadlift',
+            type: 'weight_reps',
+            primary_muscle_group: 'Hamstrings',
+            secondary_muscle_groups: ['Lower Back', 'Glutes'],
+            equipment: 'barbell',
+            is_custom: false,
+          },
+        ];
+
+        // Add the new workout to our mock data
+        const extendedMockWorkouts = [...mockWorkouts, workoutWithHigherWeight];
+
+        // Mock the API to return our extended data
+        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: extendedMockWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        (hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+          exercises: extendedTemplates,
+          page: 1,
+          pageCount: 1,
+        });
+
+        const result = await getExercises();
+
+        // Find Romanian Deadlift in results
+        const romanianDeadlift = result.find((ex) => ex.id === 'exercise4');
+        expect(romanianDeadlift).toBeDefined();
+
+        // Check that actual1RM uses the heavier weight (110kg) even though it was lifted for 8 reps
+        expect(romanianDeadlift?.actual1RM).toBeDefined();
+        expect(romanianDeadlift?.actual1RM?.weightKg).toBe(110);
+
+        // Check that estimated1RM is still based on the formula
+        expect(romanianDeadlift?.estimated1RM).toBeDefined();
+
+        // The estimated1RM should be higher than 110kg since it's calculating what could be lifted at 1 rep
+        if (romanianDeadlift?.estimated1RM) {
+          expect(romanianDeadlift.estimated1RM.weightKg).toBeGreaterThan(110);
+        }
+      });
     });
   });
 });

@@ -458,11 +458,21 @@ export async function getExercises(searchTerm?: string) {
     const exerciseActualOneRM = new Map<string, { weightKg: number; date: string }>();
 
     exerciseRecords.forEach((records, exerciseId) => {
-      if (records.has(1)) {
-        const record = records.get(1)!;
+      // Find the maximum weight lifted across all rep counts
+      let maxWeight = 0;
+      let maxWeightDate = '';
+
+      records.forEach(({ weight, date }) => {
+        if (weight > maxWeight) {
+          maxWeight = weight;
+          maxWeightDate = date;
+        }
+      });
+
+      if (maxWeight > 0) {
         exerciseActualOneRM.set(exerciseId, {
-          weightKg: record.weight,
-          date: record.date,
+          weightKg: maxWeight,
+          date: maxWeightDate,
         });
       }
     });
