@@ -1,26 +1,32 @@
 /**
  * Unit tests for hevyService.ts
  */
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import {
+import { describe, it, expect, beforeEach, afterEach, vi, type MockedFunction } from 'vitest';
+import type { Workout, ExerciseTemplate, Routine, ExerciseSet } from '../../types';
+import hevyApi from '../hevyApi';
+import hevyService from '../hevyService';
+
+const {
   calculateWorkoutStats,
   analyzeProgressForExercise,
-  fetchAllWorkouts,
+  calculateRecordsByReps,
   fetchAllExerciseTemplates,
   fetchAllRoutines,
-  getRecentWorkouts,
-  getWorkoutsInTimeframe,
-  getWorkoutDetails,
-  getExerciseById,
-  searchExercisesByName,
-  getFavoriteExercises,
-  calculateRecordsByReps,
-} from '../hevyService';
-import hevyApi from '../hevyApi';
-import { Workout, ExerciseTemplate, Routine } from '../../types';
+  fetchAllWorkouts,
+  getWorkouts,
+  getExercises,
+  populateCache,
+  processExerciseProgress,
+} = hevyService;
 
 // Mock the hevyApi module
-vi.mock('../hevyApi');
+vi.mock('../hevyApi', () => ({
+  default: {
+    getWorkouts: vi.fn(),
+    getExercises: vi.fn(),
+    getRoutines: vi.fn(),
+  },
+}));
 
 describe('Hevy Service', () => {
   // Mock data for tests
@@ -199,6 +205,22 @@ describe('Hevy Service', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Setup default mock responses
+    (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+      workouts: mockWorkouts,
+      page: 1,
+      pageCount: 1,
+    });
+    (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+      exercises: mockExerciseTemplates,
+      page: 1,
+      pageCount: 1,
+    });
+    (hevyApi.getRoutines as MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValue({
+      routines: mockRoutines,
+      page: 1,
+      pageCount: 1,
+    });
   });
 
   afterEach(() => {
@@ -212,7 +234,9 @@ describe('Hevy Service', () => {
       expect(stats.durationMinutes).toBe(90);
       expect(stats.exerciseCount).toBe(2);
       expect(stats.totalSets).toBe(5);
-      expect(stats.totalVolume).toBe(60 * 10 + 100 * 8 + 110 * 5 + 150 * 10 + 160 * 8);
+      // Calculate expected volume: (60*10 + 100*8 + 110*5) + (150*10 + 160*8)
+      const expectedVolume = 60 * 10 + 100 * 8 + 110 * 5 + (150 * 10 + 160 * 8);
+      expect(stats.totalVolume).toBe(expectedVolume);
     });
 
     it('should handle a workout with zero exercises', () => {
@@ -234,48 +258,87 @@ describe('Hevy Service', () => {
       expect(stats.totalSets).toBe(0);
       expect(stats.totalVolume).toBe(0);
     });
+
+    it('should handle exercises with missing weight or reps', () => {
+      const workoutWithMissingData: Workout = {
+        ...mockWorkouts[0],
+        exercises: [
+          {
+            ...mockWorkouts[0].exercises[0],
+            sets: [
+              {
+                index: 0,
+                type: 'normal',
+                weight_kg: 0,
+                reps: 10,
+                distance_meters: null,
+                duration_seconds: null,
+                rpe: null,
+                custom_metric: null,
+              } as ExerciseSet,
+              {
+                index: 1,
+                type: 'normal',
+                weight_kg: 100,
+                reps: 0,
+                distance_meters: null,
+                duration_seconds: null,
+                rpe: null,
+                custom_metric: null,
+              } as ExerciseSet,
+            ],
+          },
+        ],
+      };
+
+      const stats = calculateWorkoutStats(workoutWithMissingData);
+      expect(stats.totalVolume).toBe(0);
+      expect(stats.totalSets).toBe(2);
+    });
   });
 
   describe('analyzeProgressForExercise', () => {
-    it('should analyze progress for an exercise correctly', async () => {
+    it('should analyze progress for an exercise correctly', () => {
       const exerciseId = 'exercise1';
-
-      // Mock the API call
-      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      const progressData = await analyzeProgressForExercise(exerciseId);
+      const progressData = analyzeProgressForExercise(exerciseId, mockWorkouts);
 
       expect(progressData).toHaveLength(1);
       expect(progressData[0].date).toBe(mockWorkouts[0].start_time);
+      expect(progressData[0].sets).toHaveLength(mockWorkouts[0].exercises[0].sets.length);
 
-      // Check that sets are included correctly
-      expect(progressData[0].sets).toBeDefined();
-      expect(progressData[0].sets.length).toBe(mockWorkouts[0].exercises[0].sets.length);
-
-      // Check that a specific set is mapped correctly
+      // Verify set data is mapped correctly
       const firstSet = progressData[0].sets[0];
-      expect(firstSet.index).toBe(mockWorkouts[0].exercises[0].sets[0].index);
-      expect(firstSet.type).toBe(mockWorkouts[0].exercises[0].sets[0].type);
-      expect(firstSet.weightKg).toBe(mockWorkouts[0].exercises[0].sets[0].weight_kg);
-      expect(firstSet.reps).toBe(mockWorkouts[0].exercises[0].sets[0].reps);
+      expect(firstSet).toEqual({
+        index: mockWorkouts[0].exercises[0].sets[0].index,
+        type: mockWorkouts[0].exercises[0].sets[0].type,
+        weightKg: mockWorkouts[0].exercises[0].sets[0].weight_kg,
+        reps: mockWorkouts[0].exercises[0].sets[0].reps,
+      });
     });
 
-    it('should return empty array if no workouts have the specified exercise', async () => {
+    it('should sort progress data by date in descending order', () => {
+      const exerciseId = 'exercise1';
+      const workoutsOutOfOrder = [
+        {
+          ...mockWorkouts[0],
+          start_time: '2023-02-01T10:00:00Z',
+        },
+        {
+          ...mockWorkouts[0],
+          start_time: '2023-03-01T10:00:00Z',
+        },
+      ];
+
+      const progressData = analyzeProgressForExercise(exerciseId, workoutsOutOfOrder);
+      expect(progressData).toHaveLength(2);
+      expect(new Date(progressData[0].date).getTime()).toBeGreaterThan(
+        new Date(progressData[1].date).getTime()
+      );
+    });
+
+    it('should return empty array if no workouts have the specified exercise', () => {
       const exerciseId = 'nonexistent';
-
-      // Mock the API call
-      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      const progressData = await analyzeProgressForExercise(exerciseId);
-
+      const progressData = analyzeProgressForExercise(exerciseId, mockWorkouts);
       expect(progressData).toHaveLength(0);
     });
   });
@@ -284,14 +347,7 @@ describe('Hevy Service', () => {
     it('should calculate records by reps correctly', async () => {
       const exerciseId = 'exercise1';
 
-      // Mock the API call
-      vi.spyOn(hevyApi, 'getWorkouts').mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      const progressData = await analyzeProgressForExercise(exerciseId);
+      const progressData = analyzeProgressForExercise(exerciseId, mockWorkouts);
       const records = calculateRecordsByReps(progressData);
 
       // Check that we have records
@@ -317,29 +373,6 @@ describe('Hevy Service', () => {
   });
 
   describe('API integration functions', () => {
-    beforeEach(() => {
-      // Mock the hevyApi.getWorkouts function
-      (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
-        workouts: mockWorkouts,
-        page: 1,
-        pageCount: 1,
-      });
-
-      // Mock the hevyApi.getExercises function
-      (hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
-        exercises: mockExerciseTemplates,
-        page: 1,
-        pageCount: 1,
-      });
-
-      // Mock the hevyApi.getRoutines function
-      (hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValue({
-        routines: mockRoutines,
-        page: 1,
-        pageCount: 1,
-      });
-    });
-
     describe('fetchAllWorkouts', () => {
       it('should fetch all workouts from the API', async () => {
         const workouts = await fetchAllWorkouts();
@@ -350,18 +383,14 @@ describe('Hevy Service', () => {
 
       it('should handle pagination when there are multiple pages', async () => {
         // Mock first page response
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockResolvedValueOnce({
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValueOnce({
           workouts: [mockWorkouts[0]],
           page: 1,
           pageCount: 2,
         });
 
         // Mock second page response
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockResolvedValueOnce({
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValueOnce({
           workouts: [mockWorkouts[1]],
           page: 2,
           pageCount: 2,
@@ -377,9 +406,9 @@ describe('Hevy Service', () => {
       });
 
       it('should return empty array when API call fails', async () => {
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockRejectedValueOnce(new Error('API error'));
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockRejectedValueOnce(
+          new Error('API error')
+        );
 
         const workouts = await fetchAllWorkouts();
 
@@ -397,22 +426,22 @@ describe('Hevy Service', () => {
 
       it('should handle pagination when there are multiple pages', async () => {
         // Mock first page response
-        (
-          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
-        ).mockResolvedValueOnce({
-          exercises: [mockExerciseTemplates[0]],
-          page: 1,
-          pageCount: 2,
-        });
+        (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockResolvedValueOnce(
+          {
+            exercises: [mockExerciseTemplates[0]],
+            page: 1,
+            pageCount: 2,
+          }
+        );
 
         // Mock second page response
-        (
-          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
-        ).mockResolvedValueOnce({
-          exercises: [mockExerciseTemplates[1], mockExerciseTemplates[2]],
-          page: 2,
-          pageCount: 2,
-        });
+        (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockResolvedValueOnce(
+          {
+            exercises: [mockExerciseTemplates[1], mockExerciseTemplates[2]],
+            page: 2,
+            pageCount: 2,
+          }
+        );
 
         const exercises = await fetchAllExerciseTemplates();
 
@@ -422,9 +451,9 @@ describe('Hevy Service', () => {
       });
 
       it('should return empty array when API call fails', async () => {
-        (
-          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
-        ).mockRejectedValueOnce(new Error('API error'));
+        (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockRejectedValueOnce(
+          new Error('API error')
+        );
 
         const exercises = await fetchAllExerciseTemplates();
 
@@ -442,18 +471,14 @@ describe('Hevy Service', () => {
 
       it('should handle pagination when there are multiple pages', async () => {
         // Mock first page response with pageCount = 2
-        (
-          hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>
-        ).mockResolvedValueOnce({
+        (hevyApi.getRoutines as MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValueOnce({
           routines: [mockRoutines[0]],
           page: 1,
           pageCount: 2,
         });
 
         // Mock second page response
-        (
-          hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>
-        ).mockResolvedValueOnce({
+        (hevyApi.getRoutines as MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValueOnce({
           routines: [],
           page: 2,
           pageCount: 2,
@@ -466,9 +491,9 @@ describe('Hevy Service', () => {
       });
 
       it('should return empty array when API call fails', async () => {
-        (
-          hevyApi.getRoutines as vi.MockedFunction<typeof hevyApi.getRoutines>
-        ).mockRejectedValueOnce(new Error('API error'));
+        (hevyApi.getRoutines as MockedFunction<typeof hevyApi.getRoutines>).mockRejectedValueOnce(
+          new Error('API error')
+        );
 
         const routines = await fetchAllRoutines();
 
@@ -476,102 +501,10 @@ describe('Hevy Service', () => {
       });
     });
 
-    describe('getRecentWorkouts', () => {
-      it('should return the most recent workouts', async () => {
-        // Mock sorted workouts response (newest first)
-        const sortedMockWorkouts = [...mockWorkouts].sort(
-          (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-        );
-
-        const recentWorkouts = await getRecentWorkouts(1);
-
-        expect(Array.isArray(recentWorkouts)).toBe(true);
-        expect(recentWorkouts).not.toBeNull();
-        if (recentWorkouts && !Array.isArray(recentWorkouts)) {
-          expect(recentWorkouts).toHaveLength(1);
-          // Expect the newest workout (workout2) to be first
-          expect(recentWorkouts[0]).toEqual(sortedMockWorkouts[0]);
-        }
-      });
-
-      it('should handle limit parameter', async () => {
-        const recentWorkouts = await getRecentWorkouts(2);
-
-        expect(Array.isArray(recentWorkouts)).toBe(true);
-        if (recentWorkouts && !Array.isArray(recentWorkouts)) {
-          expect(recentWorkouts).toHaveLength(2);
-        }
-      });
-
-      it('should return empty response object when API call fails', async () => {
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockRejectedValueOnce(new Error('API error'));
-
-        const recentWorkouts = await getRecentWorkouts();
-
-        expect(recentWorkouts).toEqual([]);
-      });
-    });
-
-    describe('getWorkoutDetails', () => {
-      it('should return details for a specific workout', async () => {
-        const workoutDetails = await getWorkoutDetails('workout1');
-
-        expect(workoutDetails).not.toBeNull();
-        if (workoutDetails) {
-          expect(workoutDetails).toEqual(mockWorkouts[0]);
-        }
-      });
-
-      it('should return null if workout not found', async () => {
-        const workoutDetails = await getWorkoutDetails('nonexistent');
-
-        expect(workoutDetails).toBeNull();
-      });
-
-      it('should return null when API call fails', async () => {
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockRejectedValueOnce(new Error('API error'));
-
-        const workoutDetails = await getWorkoutDetails('workout1');
-
-        expect(workoutDetails).toBeNull();
-      });
-    });
-
-    describe('getExerciseDetailsById', () => {
-      it('should return details for a specific exercise', async () => {
-        const exerciseDetails = await getExerciseById('exercise1');
-
-        expect(exerciseDetails).not.toBeNull();
-        if (exerciseDetails) {
-          expect(exerciseDetails).toEqual(mockExerciseTemplates[0]);
-        }
-      });
-
-      it('should return null if exercise not found', async () => {
-        const exerciseDetails = await getExerciseById('nonexistent');
-
-        expect(exerciseDetails).toBeNull();
-      });
-
-      it('should return null when API call fails', async () => {
-        (
-          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
-        ).mockRejectedValueOnce(new Error('API error'));
-
-        const exerciseDetails = await getExerciseById('exercise1');
-
-        expect(exerciseDetails).toBeNull();
-      });
-    });
-
-    describe('getWorkoutsInTimeframe', () => {
+    describe('getWorkouts', () => {
       it('should return workouts after a specific date', async () => {
         const startDate = new Date('2023-01-02T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate);
+        const result = await getWorkouts(startDate);
 
         expect(Array.isArray(result)).toBe(true);
         if (result && !Array.isArray(result)) {
@@ -580,9 +513,9 @@ describe('Hevy Service', () => {
         }
       });
 
-      it('should handle limit parameter', async () => {
+      it('should handle empty date', async () => {
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate);
+        const result = await getWorkouts(startDate);
 
         if (result && !Array.isArray(result)) {
           expect(result).toHaveLength(1);
@@ -590,118 +523,51 @@ describe('Hevy Service', () => {
       });
 
       it('should return empty response object when API call fails', async () => {
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockRejectedValueOnce(new Error('API error'));
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockRejectedValueOnce(
+          new Error('API error')
+        );
 
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkoutsInTimeframe(startDate);
+        const result = await getWorkouts(startDate);
 
         expect(result).toEqual([]);
       });
     });
 
-    describe('searchExerciseTemplatesByName', () => {
-      it('should return matching exercise templates', async () => {
-        const searchResults = await searchExercisesByName('Squat');
-
-        expect(searchResults).toHaveLength(1);
-        expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
-      });
-
-      it('should return multiple matching templates', async () => {
-        const searchResults = await searchExercisesByName('Press');
-
-        expect(searchResults).toHaveLength(2);
-        expect(searchResults).toEqual([mockExerciseTemplates[1], mockExerciseTemplates[2]]);
-      });
-
-      it('should be case insensitive', async () => {
-        const searchResults = await searchExercisesByName('squat');
-
-        expect(searchResults).toHaveLength(1);
-        expect(searchResults[0]).toEqual(mockExerciseTemplates[0]);
-      });
-
-      it('should return empty array when no matches found', async () => {
-        const searchResults = await searchExercisesByName('NonexistentExercise');
-
-        expect(searchResults).toHaveLength(0);
-      });
-
-      it('should return empty array when API call fails', async () => {
-        (
-          hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>
-        ).mockRejectedValueOnce(new Error('API error'));
-
-        const searchResults = await searchExercisesByName('Squat');
-
-        expect(searchResults).toHaveLength(0);
-      });
-    });
-
-    describe('getFavoriteExercises', () => {
-      it('should return exercises sorted by frequency', async () => {
-        // Our test data has:
-        // exercise1 (Squat) in workout1
-        // exercise2 (Leg Press) in workout1
-        // exercise3 (Bench Press) in workout2
-        // So exercise1 and exercise2 should have frequency 1, and exercise3 should have frequency 1
-
-        const result = await getFavoriteExercises();
-
-        expect(result).toHaveLength(3);
-        expect(result).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ id: 'exercise1', name: 'Squat', frequency: 1 }),
-            expect.objectContaining({ id: 'exercise2', name: 'Leg Press', frequency: 1 }),
-            expect.objectContaining({ id: 'exercise3', name: 'Bench Press', frequency: 1 }),
-          ])
-        );
-      });
-
-      it('should count each exercise once per workout', async () => {
-        // Mock a new workout with duplicated exercises
-        const workoutWithDuplicates: Workout = {
-          id: 'workout3',
-          title: 'Duplicate Exercises',
-          description: 'Multiple sets of the same exercise',
-          start_time: '2023-01-05T10:00:00Z',
-          end_time: '2023-01-05T11:00:00Z',
-          updated_at: '2023-01-05T11:00:00Z',
-          created_at: '2023-01-05T10:00:00Z',
+    describe('getExercises', () => {
+      it('should return all exercises with frequency, 1RM data, and sorted by frequency', async () => {
+        // Create a mock workout with 1 rep max for exercise1
+        const workoutWithOneRepMax: Workout = {
+          id: 'workout_1rm',
+          title: '1RM Test',
+          description: 'Testing 1RM',
+          start_time: '2023-01-07T10:00:00Z',
+          end_time: '2023-01-07T11:00:00Z',
+          updated_at: '2023-01-07T11:00:00Z',
+          created_at: '2023-01-07T10:00:00Z',
           exercises: [
             {
               index: 0,
               title: 'Squat',
-              notes: 'First set',
+              notes: '1RM test',
               exercise_template_id: 'exercise1',
               superset_id: null,
               sets: [
                 {
                   index: 0,
                   type: 'normal',
-                  weight_kg: 100,
-                  reps: 10,
+                  weight_kg: 150,
+                  reps: 1, // 1RM
                   distance_meters: null,
                   duration_seconds: null,
                   rpe: null,
                   custom_metric: null,
                 },
-              ],
-            },
-            {
-              index: 1,
-              title: 'Squat',
-              notes: 'Second set',
-              exercise_template_id: 'exercise1', // Same exercise again
-              superset_id: null,
-              sets: [
                 {
-                  index: 0,
+                  index: 1,
                   type: 'normal',
-                  weight_kg: 120,
-                  reps: 8,
+                  weight_kg: 140,
+                  reps: 3, // This should give estimated 1RM of ~151
                   distance_meters: null,
                   duration_seconds: null,
                   rpe: null,
@@ -713,86 +579,345 @@ describe('Hevy Service', () => {
         };
 
         // Add the new workout to our mock data
-        const extendedMockWorkouts = [...mockWorkouts, workoutWithDuplicates];
+        const extendedMockWorkouts = [...mockWorkouts, workoutWithOneRepMax];
 
         // Mock the API to return our extended workouts
-        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
           workouts: extendedMockWorkouts,
           page: 1,
           pageCount: 1,
         });
 
-        const result = await getFavoriteExercises();
+        const result = await getExercises();
 
-        // Squat should now have frequency 2 (once in workout1, once in workout3)
-        // even though it appears twice in workout3
-        const squatExercise = result.find((e) => e.id === 'exercise1');
-        expect(squatExercise).toBeDefined();
-        expect(squatExercise?.frequency).toBe(2);
+        // Check the basic structure
+        expect(result).toHaveLength(mockExerciseTemplates.length);
+
+        // Find exercise1 (Squat) which should have frequency 2 and 1RM data
+        const squat = result.find((ex) => ex.id === 'exercise1');
+        expect(squat).toBeDefined();
+        expect(squat?.name).toBe('Squat');
+        expect(squat?.frequency).toBe(2); // Once in mockWorkouts, once in our new workout
+
+        // Check actual 1RM object structure
+        expect(squat?.actual1RM).toBeDefined();
+        expect(squat?.actual1RM).toHaveProperty('weightKg');
+        expect(squat?.actual1RM).toHaveProperty('date');
+        expect(squat?.actual1RM?.weightKg).toBe(150); // From our 1RM set
+        expect(squat?.actual1RM?.date).toBe(workoutWithOneRepMax.start_time);
+
+        // Verify estimated 1RM is present and roughly matches expected calculation
+        expect(squat?.estimated1RM).toBeDefined();
+        expect(squat?.estimated1RM).toHaveProperty('weightKg');
+        expect(squat?.estimated1RM).toHaveProperty('date');
+
+        // The formula (weight * 36/(37-reps)) with weight=140, reps=3 should yield ~150
+        if (squat?.estimated1RM) {
+          expect(squat.estimated1RM.weightKg).toBeGreaterThan(149);
+          expect(squat.estimated1RM.weightKg).toBeLessThan(151);
+          expect(squat.estimated1RM.date).toBe(workoutWithOneRepMax.start_time);
+        }
+
+        // Check other data is included
+        expect(squat).toHaveProperty('type');
+        expect(squat).toHaveProperty('primary_muscle_group');
+        expect(squat).toHaveProperty('secondary_muscle_groups');
+        expect(squat).toHaveProperty('equipment');
+
+        // Verify sorting by frequency descending
+        expect(result[0].frequency).toBeGreaterThanOrEqual(result[1].frequency);
       });
 
-      it('should handle unknown exercise templates', async () => {
-        // Mock a workout with an unknown exercise ID
-        const workoutWithUnknownExercise: Workout = {
-          id: 'workout4',
-          title: 'Unknown Exercise',
-          description: 'Contains an unknown exercise',
-          start_time: '2023-01-06T10:00:00Z',
-          end_time: '2023-01-06T11:00:00Z',
-          updated_at: '2023-01-06T11:00:00Z',
-          created_at: '2023-01-06T10:00:00Z',
-          exercises: [
-            {
-              index: 0,
-              title: 'Unknown Exercise',
-              notes: '',
-              exercise_template_id: 'unknown_exercise_id',
-              superset_id: null,
-              sets: [
-                {
-                  index: 0,
-                  type: 'normal',
-                  weight_kg: 50,
-                  reps: 10,
-                  distance_meters: null,
-                  duration_seconds: null,
-                  rpe: null,
-                  custom_metric: null,
-                },
-              ],
-            },
-          ],
-        };
+      it('should filter exercises by searchTerm when provided', async () => {
+        const result = await getExercises('squat');
 
-        // Add the new workout to our mock data
-        const extendedMockWorkouts = [...mockWorkouts, workoutWithUnknownExercise];
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe('Squat');
+      });
 
-        // Mock the API to return our extended workouts
-        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
-          workouts: extendedMockWorkouts,
-          page: 1,
-          pageCount: 1,
-        });
+      it('should handle case insensitive search', async () => {
+        const result = await getExercises('SQUAT');
 
-        const result = await getFavoriteExercises();
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe('Squat');
+      });
 
-        // Should include the unknown exercise with "Unknown Exercise" as the name
-        const unknownExercise = result.find((e) => e.id === 'unknown_exercise_id');
-        expect(unknownExercise).toBeDefined();
-        expect(unknownExercise?.name).toBe('Unknown Exercise');
-        expect(unknownExercise?.frequency).toBe(1);
+      it('should return partial matches for search term', async () => {
+        const result = await getExercises('press');
+
+        expect(result).toHaveLength(2);
+        expect(result.map((e) => e.name)).toContain('Leg Press');
+        expect(result.map((e) => e.name)).toContain('Bench Press');
+      });
+
+      it('should return empty array when no exercises match search term', async () => {
+        const result = await getExercises('nonexistent');
+
+        expect(result).toHaveLength(0);
       });
 
       it('should return empty array when API calls fail', async () => {
         // Mock API failure
-        (
-          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
-        ).mockRejectedValueOnce(new Error('API error'));
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockRejectedValueOnce(
+          new Error('API error')
+        );
 
-        const result = await getFavoriteExercises();
+        const result = await getExercises();
 
         expect(result).toEqual([]);
       });
+
+      it('should filter out exercises with zero frequency when excludeUnused is true', async () => {
+        // Create mock data with an exercise that has zero frequency
+        const zeroFrequencyExercise: ExerciseTemplate = {
+          id: 'exercise5',
+          title: 'Pull-up',
+          type: 'weight_reps',
+          primary_muscle_group: 'Back',
+          secondary_muscle_groups: ['Biceps'],
+          equipment: 'bodyweight',
+          is_custom: false,
+        };
+
+        // Add the zero frequency exercise to templates
+        const extendedTemplates = [...mockExerciseTemplates, zeroFrequencyExercise];
+
+        // Mock the API to return our extended templates
+        (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+          exercises: extendedTemplates,
+          page: 1,
+          pageCount: 1,
+        });
+
+        // With excludeUnused = true, the zero frequency exercise should be filtered out
+        const resultWithExclude = await getExercises(undefined, true);
+        expect(resultWithExclude.find((ex) => ex.id === 'exercise5')).toBeUndefined();
+
+        // With excludeUnused = false, the zero frequency exercise should be included
+        const resultWithoutExclude = await getExercises(undefined, false);
+        const pullUp = resultWithoutExclude.find((ex) => ex.id === 'exercise5');
+        expect(pullUp).toBeDefined();
+        expect(pullUp?.frequency).toBe(0);
+      });
+
+      it('should return all workouts when startDate is undefined', async () => {
+        // Create mock workouts with different dates
+        const oldWorkout: Workout = {
+          ...mockWorkouts[0],
+          id: 'old_workout',
+          start_time: '2022-01-01T10:00:00Z',
+          end_time: '2022-01-01T11:00:00Z',
+        };
+
+        const newWorkout: Workout = {
+          ...mockWorkouts[0],
+          id: 'new_workout',
+          start_time: '2024-01-01T10:00:00Z',
+          end_time: '2024-01-01T11:00:00Z',
+        };
+
+        const allWorkouts = [oldWorkout, newWorkout];
+
+        // Mock the API to return all workouts
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: allWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        // Call getExercises with undefined startDate
+        const result = await getExercises(undefined, false, undefined);
+
+        // Verify that exercises from both old and new workouts are included
+        const exerciseFrequencies = result.map((ex) => ({
+          id: ex.id,
+          frequency: ex.frequency,
+        }));
+
+        // Since both workouts contain the same exercises, their frequency should be 2
+        for (const exercise of exerciseFrequencies) {
+          if (exercise.id === 'exercise1' || exercise.id === 'exercise2') {
+            expect(exercise.frequency).toBe(2);
+          }
+        }
+
+        // Verify that dates from both old and new workouts are considered in records
+        const squatExercise = result.find((ex) => ex.id === 'exercise1');
+        expect(squatExercise).toBeDefined();
+
+        // The records should include data from both workouts
+        if (squatExercise?.actual1RM) {
+          expect([oldWorkout.start_time, newWorkout.start_time]).toContain(
+            squatExercise.actual1RM.date
+          );
+        }
+      });
+
+      it('should use the heaviest weight lifted as actual1RM regardless of rep count', async () => {
+        // Create a mock workout with a heavier weight at higher reps
+        const workoutWithHigherWeight: Workout = {
+          id: 'workout_higher_weight',
+          title: 'Heavy Weight Test',
+          description: 'Testing heavy weights at higher reps',
+          start_time: '2023-01-08T10:00:00Z',
+          end_time: '2023-01-08T11:00:00Z',
+          updated_at: '2023-01-08T11:00:00Z',
+          created_at: '2023-01-08T10:00:00Z',
+          exercises: [
+            {
+              index: 0,
+              title: 'Romanian Deadlift',
+              notes: 'Heavy set',
+              exercise_template_id: 'exercise4', // New exercise not in original mock data
+              superset_id: null,
+              sets: [
+                {
+                  index: 0,
+                  type: 'normal',
+                  weight_kg: 110, // Heavier weight
+                  reps: 8, // Higher rep count
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+                {
+                  index: 1,
+                  type: 'normal',
+                  weight_kg: 90,
+                  reps: 1, // 1RM at lower weight
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+              ],
+            },
+          ],
+        };
+
+        // Add a new exercise template for Romanian Deadlift
+        const extendedTemplates = [
+          ...mockExerciseTemplates,
+          {
+            id: 'exercise4',
+            title: 'Romanian Deadlift',
+            type: 'weight_reps',
+            primary_muscle_group: 'Hamstrings',
+            secondary_muscle_groups: ['Lower Back', 'Glutes'],
+            equipment: 'barbell',
+            is_custom: false,
+          },
+        ];
+
+        // Add the new workout to our mock data
+        const extendedMockWorkouts = [...mockWorkouts, workoutWithHigherWeight];
+
+        // Mock the API to return our extended data
+        (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: extendedMockWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+          exercises: extendedTemplates,
+          page: 1,
+          pageCount: 1,
+        });
+
+        const result = await getExercises();
+
+        // Find Romanian Deadlift in results
+        const romanianDeadlift = result.find((ex) => ex.id === 'exercise4');
+        expect(romanianDeadlift).toBeDefined();
+
+        // Check that actual1RM uses the heavier weight (110kg) even though it was lifted for 8 reps
+        expect(romanianDeadlift?.actual1RM).toBeDefined();
+        expect(romanianDeadlift?.actual1RM?.weightKg).toBe(110);
+
+        // Check that estimated1RM is still based on the formula
+        expect(romanianDeadlift?.estimated1RM).toBeDefined();
+
+        // The estimated1RM should be higher than 110kg since it's calculating what could be lifted at 1 rep
+        if (romanianDeadlift?.estimated1RM) {
+          expect(romanianDeadlift.estimated1RM.weightKg).toBeGreaterThan(110);
+        }
+      });
+    });
+  });
+
+  describe('populateCache', () => {
+    it('should call all fetch functions', async () => {
+      (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+        workouts: mockWorkouts,
+        page: 1,
+        pageCount: 1,
+      });
+
+      (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+        exercises: mockExerciseTemplates,
+        page: 1,
+        pageCount: 1,
+      });
+
+      (hevyApi.getRoutines as MockedFunction<typeof hevyApi.getRoutines>).mockResolvedValue({
+        routines: mockRoutines,
+        page: 1,
+        pageCount: 1,
+      });
+
+      await populateCache();
+
+      expect(hevyApi.getWorkouts).toHaveBeenCalled();
+      expect(hevyApi.getExercises).toHaveBeenCalled();
+      expect(hevyApi.getRoutines).toHaveBeenCalled();
+    });
+
+    it('should handle API errors gracefully', async () => {
+      (hevyApi.getWorkouts as MockedFunction<typeof hevyApi.getWorkouts>).mockRejectedValue(
+        new Error('API error')
+      );
+      (hevyApi.getExercises as MockedFunction<typeof hevyApi.getExercises>).mockRejectedValue(
+        new Error('API error')
+      );
+      (hevyApi.getRoutines as MockedFunction<typeof hevyApi.getRoutines>).mockRejectedValue(
+        new Error('API error')
+      );
+
+      await expect(populateCache()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('processExerciseProgress', () => {
+    it('should process exercise progress data correctly', () => {
+      const exercise = mockExerciseTemplates[0]; // Squat
+      const limit = 5;
+
+      const result = processExerciseProgress(exercise, mockWorkouts, limit);
+
+      expect(result.exercise).toBe(exercise);
+      expect(result.personalRecords).toBeDefined();
+      expect(Array.isArray(result.sessions)).toBe(true);
+      expect(result.sessions.length).toBeLessThanOrEqual(limit);
+    });
+
+    it('should handle exercise with no data', () => {
+      const unusedExercise: ExerciseTemplate = {
+        id: 'unused',
+        title: 'Unused Exercise',
+        type: 'weight_reps',
+        primary_muscle_group: 'Other',
+        secondary_muscle_groups: [],
+        equipment: 'none',
+        is_custom: false,
+      };
+
+      const result = processExerciseProgress(unusedExercise, mockWorkouts, 5);
+
+      expect(result.exercise).toBe(unusedExercise);
+      expect(result.personalRecords).toHaveLength(0);
+      expect(result.sessions).toHaveLength(0);
     });
   });
 });
