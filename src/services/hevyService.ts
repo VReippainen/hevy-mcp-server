@@ -366,6 +366,21 @@ export async function getExercises(searchTerm?: string) {
       return [];
     }
 
+    // Filter exercise templates by search term if provided (early filtering)
+    const filteredExerciseTemplates = searchTerm
+      ? allExerciseTemplates.filter((template) =>
+          template.title.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : allExerciseTemplates;
+
+    // If no matches found, return early
+    if (!filteredExerciseTemplates.length) {
+      return [];
+    }
+
+    // Create a map of exercise IDs for quick lookup of filtered exercises
+    const filteredExerciseIds = new Set(filteredExerciseTemplates.map((template) => template.id));
+
     // Create a map to count exercise frequencies and track max weights by rep
     const exerciseFrequency = new Map<string, number>();
     const exerciseRecords = new Map<string, Map<number, { weight: number; date: string }>>();
@@ -377,6 +392,10 @@ export async function getExercises(searchTerm?: string) {
 
       for (const exercise of workout.exercises) {
         const exerciseId = exercise.exercise_template_id;
+
+        // Skip if not in our filtered set
+        if (!filteredExerciseIds.has(exerciseId)) continue;
+
         exercisesInWorkout.add(exerciseId);
 
         // Initialize records map for this exercise if it doesn't exist
@@ -449,7 +468,7 @@ export async function getExercises(searchTerm?: string) {
     });
 
     // Create result array with exercise details, frequency and 1RM data
-    let exerciseData = allExerciseTemplates.map((template) => {
+    const exerciseData = filteredExerciseTemplates.map((template) => {
       return {
         id: template.id,
         name: template.title,
@@ -462,13 +481,6 @@ export async function getExercises(searchTerm?: string) {
         equipment: template.equipment,
       };
     });
-
-    // Filter by search term if provided
-    if (searchTerm) {
-      exerciseData = exerciseData.filter((ex) =>
-        ex.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
 
     // Sort by frequency in descending order
     exerciseData.sort((a, b) => b.frequency - a.frequency);
