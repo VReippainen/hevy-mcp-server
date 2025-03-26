@@ -107,10 +107,15 @@ server.tool(
   'Get comprehensive exercise data sorted by frequency of use',
   {
     searchTerm: z.string().optional().describe('Optional: Search term to filter exercises by name'),
+    excludeUnused: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe('If true, exclude exercises with zero frequency (never done)'),
   },
-  async ({ searchTerm }: GetExercisesParams) => {
+  async ({ searchTerm, excludeUnused }: GetExercisesParams) => {
     try {
-      const exercises = await hevyService.getExercises(searchTerm);
+      const exercises = await hevyService.getExercises(searchTerm, excludeUnused);
 
       if (!exercises || exercises.length === 0) {
         return createErrorResponse(
@@ -185,7 +190,8 @@ server.tool(
   {},
   async () => {
     try {
-      const exercises = await hevyService.getExercises();
+      // Always exclude unused exercises for favorite exercises (frequency > 0)
+      const exercises = await hevyService.getExercises(undefined, true);
 
       if (!exercises || exercises.length === 0) {
         return createErrorResponse('No exercise data found');

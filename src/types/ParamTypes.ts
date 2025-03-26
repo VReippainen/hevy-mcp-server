@@ -21,4 +21,5 @@ export interface AnalyzeWorkoutVolumeParams {
 
 export interface GetExercisesParams {
   searchTerm?: string;
+  excludeUnused?: boolean;
 }

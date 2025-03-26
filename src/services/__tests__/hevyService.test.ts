@@ -947,6 +947,39 @@ describe('Hevy Service', () => {
         expect(result).toEqual([]);
       });
 
+      it('should filter out exercises with zero frequency when excludeUnused is true', async () => {
+        // Create mock data with an exercise that has zero frequency
+        const zeroFrequencyExercise: ExerciseTemplate = {
+          id: 'exercise5',
+          title: 'Pull-up',
+          type: 'weight_reps',
+          primary_muscle_group: 'Back',
+          secondary_muscle_groups: ['Biceps'],
+          equipment: 'bodyweight',
+          is_custom: false,
+        };
+
+        // Add the zero frequency exercise to templates
+        const extendedTemplates = [...mockExerciseTemplates, zeroFrequencyExercise];
+
+        // Mock the API to return our extended templates
+        (hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+          exercises: extendedTemplates,
+          page: 1,
+          pageCount: 1,
+        });
+
+        // With excludeUnused = true, the zero frequency exercise should be filtered out
+        const resultWithExclude = await getExercises(undefined, true);
+        expect(resultWithExclude.find((ex) => ex.id === 'exercise5')).toBeUndefined();
+
+        // With excludeUnused = false, the zero frequency exercise should be included
+        const resultWithoutExclude = await getExercises(undefined, false);
+        const pullUp = resultWithoutExclude.find((ex) => ex.id === 'exercise5');
+        expect(pullUp).toBeDefined();
+        expect(pullUp?.frequency).toBe(0);
+      });
+
       it('should use the heaviest weight lifted as actual1RM regardless of rep count', async () => {
         // Create a mock workout with a heavier weight at higher reps
         const workoutWithHigherWeight: Workout = {

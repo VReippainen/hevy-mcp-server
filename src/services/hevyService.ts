@@ -347,9 +347,10 @@ export async function getFavoriteExercises() {
 /**
  * Get all exercises with comprehensive data
  * @param {string} [searchTerm] - Optional search term to filter exercises by name
+ * @param {boolean} [excludeUnused=false] - If true, exclude exercises with 0 frequency (never used)
  * @returns Array of objects containing exercise data, sorted by frequency
  */
-export async function getExercises(searchTerm?: string) {
+export async function getExercises(searchTerm?: string, excludeUnused: boolean = false) {
   try {
     // Get all workouts and exercise templates
     const allWorkoutsPromise = fetchAllWorkouts();
@@ -478,7 +479,7 @@ export async function getExercises(searchTerm?: string) {
     });
 
     // Create result array with exercise details, frequency and 1RM data
-    const exerciseData = filteredExerciseTemplates.map((template) => {
+    let exerciseData = filteredExerciseTemplates.map((template) => {
       return {
         id: template.id,
         name: template.title,
@@ -491,6 +492,11 @@ export async function getExercises(searchTerm?: string) {
         equipment: template.equipment,
       };
     });
+
+    // Filter out exercises with zero frequency if requested
+    if (excludeUnused) {
+      exerciseData = exerciseData.filter((exercise) => exercise.frequency > 0);
+    }
 
     // Sort by frequency in descending order
     exerciseData.sort((a, b) => b.frequency - a.frequency);
