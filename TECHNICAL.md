@@ -117,48 +117,47 @@ This will launch an interactive UI where you can explore and test all available 
 
 The following MCP tools are available for integration with LLMs:
 
-### get-recent-workouts
+### get-workouts
 
 ```typescript
 {
-  limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve')
+  limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve'),
+  startDate: z.string().optional().describe('Optional: ISO date string to filter workouts after this date'),
+  endDate: z.string().optional().describe('Optional: ISO date string to filter workouts before this date')
 }
 ```
 
-Returns user's recent workouts with duration, volume stats, and exercise details.
+Returns user's workouts with duration, volume stats, and exercise details. Results are returned in descending order of date.
 
-### get-exercise-progress-by-id
+### get-exercise-progress-by-ids
 
 ```typescript
 {
-  exerciseId: z.string().describe('ID of the exercise to retrieve progress for'),
-  limit: z.number().min(0).max(10).default(10).describe('Number of latest workouts to retrieve')
+  exerciseIds: z.array(z.string()).describe('IDs of the exercises to retrieve progress for'),
+  limit: z.number().min(0).max(10).default(10).describe('Number of latest workouts to retrieve'),
+  startDate: z.string().optional().describe('Optional: ISO date string to filter workouts after this date'),
+  endDate: z.string().optional().describe('Optional: ISO date string to filter workouts before this date')
 }
 ```
 
-Returns progress tracking for a specific exercise over time and all-time records.
+Returns progress tracking for specific exercises over time, filtered by date range.
 
-### get-exercise-id-by-name
+### get-exercises
 
 ```typescript
 {
-  searchTerm: z.string().describe('Search exercises, which name contains the search term')
+  searchTerm: z.string().optional().describe('Optional: Search term to filter exercises by name'),
+  excludeUnused: z.boolean().optional().default(true).describe('If true, exclude exercises with zero frequency (never done)'),
+  startDate: z.string().optional().describe('Optional: ISO date string to filter workouts after this date'),
+  endDate: z.string().optional().describe('Optional: ISO date string to filter workouts before this date')
 }
 ```
 
-Returns exercise IDs that match the search term.
-
-### get-exercise-ids-and-names
-
-Returns a list of all exercise IDs and names available in the Hevy API.
+Returns comprehensive exercise data sorted by frequency of use, with optional filtering by name and date range.
 
 ### get-routines
 
 Returns user's workout routines.
-
-### get-favorite-exercises
-
-Returns user's favorite exercises sorted by frequency.
 
 ## Services
 
@@ -200,44 +199,17 @@ const exercises = exercisesResult.exercises;
 
 ### Hevy Service
 
-Located in `/src/services/hevyService.ts`, this service provides methods for processing and analyzing workout data:
+Located in `/src/services/hevyService.ts`, this service provides methods for processing workout data:
 
-- `calculateWorkoutStats(workout)`: Calculates statistics for a workout (duration, volume, etc.)
-- `analyzeProgressForExercise(exerciseId)`: Analyzes progress for a specific exercise across multiple workouts
-- `fetchAllWorkouts()`: Fetches all workouts by handling pagination
-- `fetchAllExerciseTemplates()`: Fetches all exercise templates by handling pagination
-- `fetchAllRoutines()`: Fetches all routines by handling pagination
-- `getRecentWorkouts(limit)`: Gets recent workouts sorted by date
-- `getWorkoutDetails(workoutId)`: Gets detailed information about a specific workout
-- `getExerciseById(exerciseId)`: Gets exercise details by ID
-- `searchExercisesByName(searchTerm)`: Searches exercises by name
-- `getWorkoutsInTimeframe(startDate)`: Gets workouts within a specific timeframe
-- `getFavoriteExercises()`: Gets favorite exercises sorted by frequency of use
-- `populateCache()`: Populates the cache with initial data
-- `calculateRecordsByReps(progressData)`: Calculates personal records by rep count
+- `getWorkouts(startDate?, endDate?)`: Gets workouts filtered by optional date range
+- `getExercises(searchTerm?, excludeUnused?, startDate?, endDate?)`: Gets exercises with optional filtering
+- `calculateWorkoutStats(workout)`: Calculates duration and volume stats for a workout
+- `processExerciseProgress(exercise, workouts, limit)`: Processes exercise progress data
+- `fetchAllRoutines()`: Gets all user's workout routines
+- `fetchAllExerciseTemplates()`: Gets all exercise templates
+- `populateCache()`: Populates the initial cache on server startup
 
-Example usage:
-```typescript
-import hevyService from './services/hevyService';
-
-// Calculate workout stats
-const stats = hevyService.calculateWorkoutStats(workout);
-console.log(`Workout duration: ${stats.durationMinutes} minutes, Volume: ${stats.totalVolume} kg`);
-
-// Get recent workouts
-const recentWorkouts = await hevyService.getRecentWorkouts(5);
-
-// Analyze progress for an exercise
-const progress = await hevyService.analyzeProgressForExercise('ABC123');
-
-// Get personal records
-const records = hevyService.calculateRecordsByReps(progress);
-console.log('Personal records:', records);
-
-// Get favorite exercises
-const favorites = await hevyService.getFavoriteExercises();
-console.log('Most used exercises:', favorites);
-```
+The service handles data processing, caching, and provides formatted responses for the MCP tools.
 
 ## Project Structure
 

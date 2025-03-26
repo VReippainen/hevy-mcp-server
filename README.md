@@ -10,12 +10,10 @@ Model Context Protocol (MCP) is a standard that allows LLMs like Claude to integ
 
 This MCP server provides the following tools:
 
-- **get-recent-workouts**: Retrieve your most recent workouts with duration and volume stats
-- **get-exercise-progress-by-id**: Track progress for a specific exercise over time and view all-time records
-- **get-exercise-id-by-name**: Search for exercise IDs by name
-- **get-exercise-ids-and-names**: Get a list of all exercise IDs and names
+- **get-workouts**: Get workouts between start and end dates. Returns workouts in descending order of date with duration and volume stats. Max 10 workouts.
+- **get-exercise-progress-by-ids**: Track progress for specific exercises over time, filtered by date range. Returns also records per reps.
+- **get-exercises**: Get comprehensive exercise data sorted by frequency of use, with optional filtering by name and date range. Returns also actual and estimated 1RM.
 - **get-routines**: Retrieve your saved workout routines
-- **get-favorite-exercises**: Get your most frequently performed exercises
 
 ### Obtaining Your Hevy API Key
 
