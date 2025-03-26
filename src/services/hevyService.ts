@@ -9,6 +9,7 @@ import {
   WorkoutStats,
 } from '../types/index.js';
 import hevyApi from './hevyApi.js';
+import { calculateEstimated1RM } from '../utils/oneRepMaxCalculator.js';
 
 /**
  * Calculate statistics for a workout
@@ -403,25 +404,25 @@ export async function getExercises(searchTerm?: string) {
       }
     }
 
-    // Calculate estimated 1RM for each exercise
+    // Calculate estimated 1RM for each exercise using the utility function
     const exerciseOneRepMax = new Map<string, number>();
 
     exerciseRecords.forEach((records, exerciseId) => {
-      let estimatedOneRM = 0;
+      let highestEstimatedOneRM: number | null = null;
 
-      // Use Brzycki formula for each rep/weight record and keep the highest estimate
+      // Calculate 1RM for each rep/weight record and keep the highest valid estimate
       records.forEach((weight, reps) => {
-        if (reps <= 10) {
-          // Brzycki formula is most accurate for reps ≤ 10
-          const oneRM = weight * (36 / (37 - reps));
-          if (oneRM > estimatedOneRM) {
-            estimatedOneRM = oneRM;
-          }
+        // Use the utility function with default Brzycki formula
+        const oneRM = calculateEstimated1RM(weight, reps);
+
+        if (oneRM !== null && (highestEstimatedOneRM === null || oneRM > highestEstimatedOneRM)) {
+          highestEstimatedOneRM = oneRM;
         }
       });
 
-      if (estimatedOneRM > 0) {
-        exerciseOneRepMax.set(exerciseId, Math.round(estimatedOneRM * 10) / 10); // Round to 1 decimal
+      if (highestEstimatedOneRM !== null) {
+        // Round to 1 decimal place
+        exerciseOneRepMax.set(exerciseId, Math.round(highestEstimatedOneRM * 10) / 10);
       }
     });
 
