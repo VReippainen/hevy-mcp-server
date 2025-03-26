@@ -15,6 +15,7 @@ import {
   searchExercisesByName,
   getFavoriteExercises,
   calculateRecordsByReps,
+  getExercises,
 } from '../hevyService';
 import hevyApi from '../hevyApi';
 import { Workout, ExerciseTemplate, Routine } from '../../types';
@@ -790,6 +791,147 @@ describe('Hevy Service', () => {
         ).mockRejectedValueOnce(new Error('API error'));
 
         const result = await getFavoriteExercises();
+
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('getExercises', () => {
+      beforeEach(() => {
+        // Reset mocks between tests
+        vi.resetAllMocks();
+
+        // Re-setup the basic mocks for each test
+        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: mockWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        (hevyApi.getExercises as vi.MockedFunction<typeof hevyApi.getExercises>).mockResolvedValue({
+          exercises: mockExerciseTemplates,
+          page: 1,
+          pageCount: 1,
+        });
+      });
+
+      it('should return all exercises with frequency, 1RM data, and sorted by frequency', async () => {
+        // Create a mock workout with 1 rep max for exercise1
+        const workoutWithOneRepMax: Workout = {
+          id: 'workout_1rm',
+          title: '1RM Test',
+          description: 'Testing 1RM',
+          start_time: '2023-01-07T10:00:00Z',
+          end_time: '2023-01-07T11:00:00Z',
+          updated_at: '2023-01-07T11:00:00Z',
+          created_at: '2023-01-07T10:00:00Z',
+          exercises: [
+            {
+              index: 0,
+              title: 'Squat',
+              notes: '1RM test',
+              exercise_template_id: 'exercise1',
+              superset_id: null,
+              sets: [
+                {
+                  index: 0,
+                  type: 'normal',
+                  weight_kg: 150,
+                  reps: 1, // 1RM
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+                {
+                  index: 1,
+                  type: 'normal',
+                  weight_kg: 140,
+                  reps: 3, // This should give estimated 1RM of ~151
+                  distance_meters: null,
+                  duration_seconds: null,
+                  rpe: null,
+                  custom_metric: null,
+                },
+              ],
+            },
+          ],
+        };
+
+        // Add the new workout to our mock data
+        const extendedMockWorkouts = [...mockWorkouts, workoutWithOneRepMax];
+
+        // Mock the API to return our extended workouts
+        (hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>).mockResolvedValue({
+          workouts: extendedMockWorkouts,
+          page: 1,
+          pageCount: 1,
+        });
+
+        const result = await getExercises();
+
+        // Check the basic structure
+        expect(result).toHaveLength(mockExerciseTemplates.length);
+
+        // Find exercise1 (Squat) which should have frequency 2 and 1RM data
+        const squat = result.find((ex) => ex.id === 'exercise1');
+        expect(squat).toBeDefined();
+        expect(squat?.name).toBe('Squat');
+        expect(squat?.frequency).toBe(2); // Once in mockWorkouts, once in our new workout
+        expect(squat?.actual1RM).toBe(150); // From our 1RM set
+
+        // Verify estimated 1RM is present and roughly matches expected calculation
+        expect(squat?.estimated1RM).toBeDefined();
+        expect(typeof squat?.estimated1RM).toBe('number');
+        // The formula (weight * 36/(37-reps)) with weight=140, reps=3 should yield ~150
+        expect(squat?.estimated1RM).toBeGreaterThan(145);
+        expect(squat?.estimated1RM).toBeLessThan(155);
+
+        // Check other data is included
+        expect(squat).toHaveProperty('type');
+        expect(squat).toHaveProperty('primary_muscle_group');
+        expect(squat).toHaveProperty('secondary_muscle_groups');
+        expect(squat).toHaveProperty('equipment');
+
+        // Verify sorting by frequency descending
+        expect(result[0].frequency).toBeGreaterThanOrEqual(result[1].frequency);
+      });
+
+      it('should filter exercises by searchTerm when provided', async () => {
+        const result = await getExercises('squat');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe('Squat');
+      });
+
+      it('should handle case insensitive search', async () => {
+        const result = await getExercises('SQUAT');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe('Squat');
+      });
+
+      it('should return partial matches for search term', async () => {
+        const result = await getExercises('press');
+
+        expect(result).toHaveLength(2);
+        expect(result.map((e) => e.name)).toContain('Leg Press');
+        expect(result.map((e) => e.name)).toContain('Bench Press');
+      });
+
+      it('should return empty array when no exercises match search term', async () => {
+        const result = await getExercises('nonexistent');
+
+        expect(result).toHaveLength(0);
+      });
+
+      it('should return empty array when API calls fail', async () => {
+        // Mock API failure
+        (
+          hevyApi.getWorkouts as vi.MockedFunction<typeof hevyApi.getWorkouts>
+        ).mockRejectedValueOnce(new Error('API error'));
+
+        const result = await getExercises();
 
         expect(result).toEqual([]);
       });

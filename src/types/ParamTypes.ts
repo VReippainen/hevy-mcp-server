@@ -18,3 +18,7 @@ export interface GetExerciseProgressParams {
 export interface AnalyzeWorkoutVolumeParams {
   timeframe: 'week' | 'month' | 'quarter' | 'year';
 }
+
+export interface GetExercisesParams {
+  searchTerm?: string;
+}

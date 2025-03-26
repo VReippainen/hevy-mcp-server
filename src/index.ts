@@ -8,6 +8,7 @@ import {
   GetRecentWorkoutsParams,
   GetExerciseIdByNameParams,
   GetExerciseProgressParams,
+  GetExercisesParams,
 } from './types/ParamTypes.js';
 import { createErrorResponse, createSuccessResponse } from './utils/responseUtils.js';
 import { readFileSync } from 'fs';
@@ -102,6 +103,30 @@ server.tool(
 );
 
 server.tool(
+  'get-exercises',
+  'Get comprehensive exercise data sorted by frequency of use',
+  {
+    searchTerm: z.string().optional().describe('Optional: Search term to filter exercises by name'),
+  },
+  async ({ searchTerm }: GetExercisesParams) => {
+    try {
+      const exercises = await hevyService.getExercises(searchTerm);
+
+      if (!exercises || exercises.length === 0) {
+        return createErrorResponse(
+          searchTerm ? `No exercises found matching: ${searchTerm}` : 'No exercise data found'
+        );
+      }
+
+      return createSuccessResponse({ exercises });
+    } catch (error) {
+      console.error('Error in get-exercises:', error);
+      return createErrorResponse('Failed to retrieve exercises');
+    }
+  }
+);
+
+server.tool(
   'get-exercise-id-by-name',
   'Get exercise ID by name',
   {
@@ -160,11 +185,18 @@ server.tool(
   {},
   async () => {
     try {
-      const favoriteExercises = await hevyService.getFavoriteExercises();
+      const exercises = await hevyService.getExercises();
 
-      if (!favoriteExercises || favoriteExercises.length === 0) {
+      if (!exercises || exercises.length === 0) {
         return createErrorResponse('No exercise data found');
       }
+
+      // Convert to the expected format for backward compatibility
+      const favoriteExercises = exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        frequency: exercise.frequency,
+      }));
 
       return createSuccessResponse({
         favoriteExercises,

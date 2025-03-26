@@ -344,6 +344,129 @@ export async function getFavoriteExercises() {
 }
 
 /**
+ * Get all exercises with comprehensive data
+ * @param {string} [searchTerm] - Optional search term to filter exercises by name
+ * @returns Array of objects containing exercise data, sorted by frequency
+ */
+export async function getExercises(searchTerm?: string) {
+  try {
+    // Get all workouts and exercise templates
+    const allWorkoutsPromise = fetchAllWorkouts();
+    const allExerciseTemplatesPromise = fetchAllExerciseTemplates();
+
+    // Wait for both promises to resolve or reject
+    const [allWorkouts, allExerciseTemplates] = await Promise.all([
+      allWorkoutsPromise,
+      allExerciseTemplatesPromise,
+    ]);
+
+    // If either API call returned empty arrays, return empty result
+    if (!allWorkouts.length || !allExerciseTemplates.length) {
+      return [];
+    }
+
+    // Create a map to count exercise frequencies and track max weights by rep
+    const exerciseFrequency = new Map<string, number>();
+    const exerciseRecords = new Map<string, Map<number, number>>();
+
+    // Count exercises across all workouts and track records
+    for (const workout of allWorkouts) {
+      // Use a set to count each exercise only once per workout for frequency
+      const exercisesInWorkout = new Set<string>();
+
+      for (const exercise of workout.exercises) {
+        const exerciseId = exercise.exercise_template_id;
+        exercisesInWorkout.add(exerciseId);
+
+        // Initialize records map for this exercise if it doesn't exist
+        if (!exerciseRecords.has(exerciseId)) {
+          exerciseRecords.set(exerciseId, new Map<number, number>());
+        }
+
+        // Track max weights by rep count
+        for (const set of exercise.sets) {
+          if (set.type === 'warmup' || !set.weight_kg || !set.reps) continue;
+
+          const repCount = set.reps;
+          const weight = set.weight_kg;
+          const recordsMap = exerciseRecords.get(exerciseId)!;
+
+          if (!recordsMap.has(repCount) || weight > recordsMap.get(repCount)!) {
+            recordsMap.set(repCount, weight);
+          }
+        }
+      }
+
+      // Increment the frequency for each unique exercise in this workout
+      for (const exerciseId of exercisesInWorkout) {
+        exerciseFrequency.set(exerciseId, (exerciseFrequency.get(exerciseId) || 0) + 1);
+      }
+    }
+
+    // Calculate estimated 1RM for each exercise
+    const exerciseOneRepMax = new Map<string, number>();
+
+    exerciseRecords.forEach((records, exerciseId) => {
+      let estimatedOneRM = 0;
+
+      // Use Brzycki formula for each rep/weight record and keep the highest estimate
+      records.forEach((weight, reps) => {
+        if (reps <= 10) {
+          // Brzycki formula is most accurate for reps ≤ 10
+          const oneRM = weight * (36 / (37 - reps));
+          if (oneRM > estimatedOneRM) {
+            estimatedOneRM = oneRM;
+          }
+        }
+      });
+
+      if (estimatedOneRM > 0) {
+        exerciseOneRepMax.set(exerciseId, Math.round(estimatedOneRM * 10) / 10); // Round to 1 decimal
+      }
+    });
+
+    // Get actual 1RM (max weight lifted for 1 rep)
+    const exerciseActualOneRM = new Map<string, number>();
+
+    exerciseRecords.forEach((records, exerciseId) => {
+      if (records.has(1)) {
+        exerciseActualOneRM.set(exerciseId, records.get(1)!);
+      }
+    });
+
+    // Create result array with exercise details, frequency and 1RM data
+    let exerciseData = allExerciseTemplates.map((template) => {
+      return {
+        id: template.id,
+        name: template.title,
+        frequency: exerciseFrequency.get(template.id) || 0,
+        estimated1RM: exerciseOneRepMax.get(template.id) || null,
+        actual1RM: exerciseActualOneRM.get(template.id) || null,
+        type: template.type,
+        primary_muscle_group: template.primary_muscle_group,
+        secondary_muscle_groups: template.secondary_muscle_groups,
+        equipment: template.equipment,
+      };
+    });
+
+    // Filter by search term if provided
+    if (searchTerm) {
+      exerciseData = exerciseData.filter((ex) =>
+        ex.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Sort by frequency in descending order
+    exerciseData.sort((a, b) => b.frequency - a.frequency);
+
+    return exerciseData;
+  } catch (error) {
+    console.error('Error getting exercises data:', error);
+    return [];
+  }
+}
+
+/**
  * Populate the cache with initial data
  * Pre-fetches all exercise templates, routines, and workouts
  */
@@ -408,4 +531,5 @@ export default {
   getFavoriteExercises,
   populateCache,
   calculateRecordsByReps,
+  getExercises,
 };
