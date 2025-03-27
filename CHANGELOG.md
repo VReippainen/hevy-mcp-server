@@ -1,3 +1,10 @@
+# [1.0.0-alpha.6](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2025-03-27)
+
+
+### Bug Fixes
+
+* trigger ([e5137da](https://github.com/VReippainen/hevy-mcp-server/commit/e5137da6b723249d6eda3f92bd1ab440a45dd28a))
+
 # [1.0.0-alpha.5](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2025-03-27)
 
 
