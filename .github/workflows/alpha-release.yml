@@ -1,11 +1,14 @@
 name: Alpha Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'Pull Request number'
-        required: true
+    pull_request:
+        branches:
+            - main
+  #workflow_dispatch:
+  #  inputs:
+  #    pr_number:
+  #      description: 'Pull Request number'
+  #      required: true
 
 jobs:
   release:
