@@ -1,6 +1,6 @@
 {
   "name": "@vreippainen/hevy-mcp-server",
-  "version": "1.0.0-alpha.3",
+  "version": "1.0.0-alpha.4",
   "description": "A MCP server for Hevy",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
