@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import hevyService from './services/hevyService.js';
@@ -24,6 +24,48 @@ const server = new McpServer({
   name: packageJson.name,
   version: packageJson.version,
 });
+
+// Just a placeholder prompt to test out the prompt feature
+server.prompt(
+  'make-workout-prompt',
+  'Get a prompt fow building user a workout using her favorite exercises.',
+  {},
+  async () => {
+    const exercises = await hevyService.getExercises();
+    if (!exercises?.length) {
+      throw new Error('No exercises found. Cannot form prompt');
+    }
+    const favoriteWorkouts = exercises
+      .slice(0, 20)
+      .map((exercise) => exercise.name)
+      .join(', ');
+    return {
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `Make me a workout using my following favorite workouts:\n\n${favoriteWorkouts}`,
+          },
+        },
+      ],
+    };
+  }
+);
+
+// Just a placeholder resource to test out the resource feature
+server.resource(
+  'echo',
+  new ResourceTemplate('echo://{message}', { list: undefined }),
+  async (uri, { message }) => ({
+    contents: [
+      {
+        uri: uri.href,
+        text: `Resource echo: ${message}`,
+      },
+    ],
+  })
+);
 
 // Register workout tools
 server.tool(
