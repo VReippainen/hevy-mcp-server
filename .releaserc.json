@@ -1,8 +1,7 @@
 {
   "branches": [
-    "main",
-    { "name": "beta", "prerelease": true },
-    { "name": "alpha", "prerelease": true },
+    { "name": "main", "channel": "latest", "prerelease": false },
+    { "name": "main", "channel": "beta", "prerelease": "beta" },
     { "name": "feat*", "prerelease": "alpha" },
     { "name": "bug*", "prerelease": "alpha" }
   ],
