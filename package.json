@@ -36,7 +36,7 @@
     "build": "tsc",
     "prepublishOnly": "pnpm build",
     "publish:prod": "pnpm semantic-release --no-ci",
-    "publish:alpha": "pnpm semantic-release --channel alpha --prerelease alpha --no-ci",
+    "publish:alpha": "pnpm semantic-release --channel alpha --prerelease alpha",
     "version:patch": "pnpm version patch",
     "version:minor": "pnpm version minor",
     "version:major": "pnpm version major",
