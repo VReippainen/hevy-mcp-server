@@ -246,3 +246,35 @@ The service handles data processing, caching, and provides formatted responses f
 ## Project Structure
 
 ```
+/
+├── src/                # TypeScript source files
+│   ├── index.ts        # Main server entrypoint
+│   ├── config.ts       # Configuration file
+│   ├── services/       # API services
+│   │   ├── api.ts      # API fetch service
+│   │   ├── hevyApi.ts  # Hevy API service
+│   │   ├── hevyService.ts # Hevy data processing service
+│   │   └── __mocks__/  # Mock services for testing
+│   │   └── __tests__/  # Service tests
+│   ├── utils/          # Utility functions
+│   │   ├── index.ts    # Utility exports
+│   │   ├── dateUtils.ts # Date manipulation utilities
+│   │   ├── responseUtils.ts # API response formatting
+│   │   ├── validation.ts # Input validation utilities
+│   │   └── __tests__/  # Utility tests
+│   ├── __tests__/      # Application tests
+│   └── types/          # Type definitions
+│       ├── index.ts    # Types barrel file
+│       ├── Exercise.ts # Exercise interface and types
+│       ├── ParamTypes.ts # Parameter types for tools
+│       ├── Progress.ts # Progress tracking types
+│       ├── QueryParams.ts # Query parameter types
+│       ├── Routine.ts  # Routine interface
+│       ├── Stats.ts    # Statistics types
+│       └── Workout.ts  # Workout interface
+├── dist/               # Compiled JavaScript (generated)
+├── .env                # Environment variables (not in version control)
+├── .env.example        # Example environment variables
+├── package.json        # Dependencies and scripts
+└── tsconfig.json       # TypeScript configuration
+```
