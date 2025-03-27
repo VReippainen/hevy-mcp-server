@@ -1,6 +1,6 @@
 {
   "name": "@vreippainen/hevy-mcp-server",
-  "version": "1.0.0",
+  "version": "1.0.1-alpha.1",
   "description": "A MCP server for Hevy",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,8 +36,7 @@
     "build": "tsc",
     "prepublishOnly": "pnpm build",
     "publish:prod": "pnpm semantic-release --no-ci",
-    "publish:beta": "pnpm semantic-release --prerelease beta --no-ci",
-    "publish:alpha": "pnpm semantic-release --prerelease alpha --no-ci",
+    "publish:alpha": "pnpm semantic-release --channel alpha --no-ci",
     "version:patch": "pnpm version patch",
     "version:minor": "pnpm version minor",
     "version:major": "pnpm version major",

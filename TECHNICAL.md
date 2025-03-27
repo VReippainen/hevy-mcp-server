@@ -128,13 +128,22 @@ GITHUB_TOKEN=your_github_token_here
 
 ### Release Types
 
-Different types of releases can be created based on the branch you're working on:
+Different types of releases are created based on the branch you're working on:
 
-- **Alpha Releases**: Can be published from feature branches (`feat/*`) or bugfix branches (`bug/*`)
-- **Beta Releases**: Can only be published from the `beta` branch
+- **Feature Branches**: Must use the prefix `feat/` (e.g., `feat/new-feature`)
+- **Bug Fix Branches**: Must use the prefix `bug/` (e.g., `bug/fix-issue`)
 - **Production Releases**: Can only be published from the `main` branch
 
-The versioning and release type are determined automatically based on your commit messages and the branch name.
+Release process:
+- Production releases are published manually from the `main` branch by the maintainer
+- Alpha releases can be manually triggered from `feat/*` and `bug/*` branches using:
+  ```bash
+  pn publish:alpha
+  ```
+
+> Note: Support for beta releases is currently work in progress.
+
+The versioning is determined automatically based on your commit messages and the branch name.
 
 ## MCP Tools
 
