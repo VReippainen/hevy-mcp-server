@@ -1,3 +1,10 @@
+## [1.0.2-alpha.1](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.1...v1.0.2-alpha.1) (2025-03-27)
+
+
+### Bug Fixes
+
+* Add placeholder prompt and resource ([528b62e](https://github.com/VReippainen/hevy-mcp-server/commit/528b62eca19c3c852a55d3479d12fad103850284))
+
 ## [1.0.1](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.0...v1.0.1) (2025-03-27)
 
 
