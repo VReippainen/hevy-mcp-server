@@ -113,6 +113,29 @@ npx @modelcontextprotocol/inspector@0.6.0 node dist/index.js
 
 This will launch an interactive UI where you can explore and test all available MCP tools in the server.
 
+## Publishing
+
+The project uses semantic-release for automated versioning and publishing. Publishing is done manually and requires proper authentication setup.
+
+### Authentication
+
+Add the following tokens to your `.env` file:
+
+```
+NPM_TOKEN=your_npm_token_here
+GITHUB_TOKEN=your_github_token_here
+```
+
+### Release Types
+
+Different types of releases can be created based on the branch you're working on:
+
+- **Alpha Releases**: Can be published from feature branches (`feat/*`) or bugfix branches (`bug/*`)
+- **Beta Releases**: Can only be published from the `beta` branch
+- **Production Releases**: Can only be published from the `main` branch
+
+The versioning and release type are determined automatically based on your commit messages and the branch name.
+
 ## MCP Tools
 
 The following MCP tools are available for integration with LLMs:
