@@ -1,3 +1,13 @@
+# [1.0.0-alpha.5](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2025-03-27)
+
+
+### Bug Fixes
+
+* force npm token ([c37cd56](https://github.com/VReippainen/hevy-mcp-server/commit/c37cd5684d71aff3f731c9d775612727bbb12769))
+* trigger ([06cd097](https://github.com/VReippainen/hevy-mcp-server/commit/06cd0979d618054b6cd38a996f7e392c0cceae93))
+* try now ([1ef06a4](https://github.com/VReippainen/hevy-mcp-server/commit/1ef06a4a91f0198c42e9c2c2efa10e024d84aabc))
+* try pushing using beta pipeline ([f0a0fe9](https://github.com/VReippainen/hevy-mcp-server/commit/f0a0fe9bbe7729b7137f73f5d6820e88bc279ef9))
+
 # [1.0.0-alpha.4](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2025-03-27)
 
 
