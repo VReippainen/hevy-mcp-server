@@ -3,7 +3,7 @@ name: Beta Release
 on:
   push:
     branches:
-      - main
+      - feat/19-semantic-release
 
 jobs:
   release:
@@ -40,4 +40,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release --prerelease beta 
+        run: npx semantic-release --prerelease alpha
