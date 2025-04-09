@@ -111,7 +111,7 @@ async function fetchAllWorkouts(): Promise<Workout[]> {
     return allWorkouts;
   } catch (error) {
     console.error('Error fetching all workouts:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -154,7 +154,7 @@ async function fetchAllExerciseTemplates(): Promise<ExerciseTemplate[]> {
     return allExercises;
   } catch (error) {
     console.error('Error fetching all exercise templates:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -192,7 +192,7 @@ async function fetchAllRoutines(): Promise<Routine[]> {
     return allRoutines;
   } catch (error) {
     console.error('Error fetching all routines:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -220,7 +220,7 @@ async function getWorkouts(startDate?: Date, endDate?: Date): Promise<Workout[]>
     return sortedWorkouts;
   } catch (error) {
     console.error('Error fetching workouts in timeframe:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -390,7 +390,7 @@ async function getExercises(
     return exerciseData;
   } catch (error) {
     console.error('Error getting exercises data:', error);
-    return [];
+    throw error;
   }
 }
 
