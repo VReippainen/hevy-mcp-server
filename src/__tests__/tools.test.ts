@@ -8,7 +8,6 @@ vi.mock('../services/hevyService.js');
 vi.mock('../utils/responseUtils.js');
 
 // Turn off TypeScript type checking for this test file
-// @ts-expect-error - Ignoring mock type errors for tests
 describe('Tool Functions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
