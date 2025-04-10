@@ -1,3 +1,11 @@
+## [1.0.2](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.1...v1.0.2) (2025-04-10)
+
+
+### Bug Fixes
+
+* Refactor index and tools ([#27](https://github.com/VReippainen/hevy-mcp-server/issues/27)) ([6cbbcaf](https://github.com/VReippainen/hevy-mcp-server/commit/6cbbcaf58c3189754d473b091969a1c978d13a55))
+* remove channels from readme ([#23](https://github.com/VReippainen/hevy-mcp-server/issues/23)) ([5c0707e](https://github.com/VReippainen/hevy-mcp-server/commit/5c0707eec55d401c215c72e8608970508650c1d9))
+
 ## [1.0.1](https://github.com/VReippainen/hevy-mcp-server/compare/v1.0.0...v1.0.1) (2025-03-27)
 
 
