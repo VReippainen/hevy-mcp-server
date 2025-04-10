@@ -2,180 +2,110 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
-import hevyService from './services/hevyService.js';
 import {
   GetExercisesParams,
   GetWorkoutsParams,
   GetExerciseProgressParams,
 } from './types/ParamTypes.js';
-import { createErrorResponse, createSuccessResponse } from './utils/responseUtils.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { getWorkouts, getExerciseProgressByIds, getExercises, getRoutines } from './tools.js';
+import {
+  getWorkoutsSchema,
+  getExerciseProgressSchema,
+  getExercisesSchema,
+  getRoutinesSchema,
+} from './schemas/tools.js';
+import { createWorkoutPrompt } from './prompts.js';
+import { getToolsDocumentation } from './resources.js';
 
 // Get package.json data
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJson = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
-// Create server instance
+// Create server instance with capabilities
 const server = new McpServer({
   name: packageJson.name,
   version: packageJson.version,
 });
 
+server.resource(
+  'tools-documentation',
+  'file:///tools/documentation',
+  {
+    contentType: 'text/markdown',
+    description: 'Documentation for all available tools in the Hevy MCP Server',
+  },
+  async () => getToolsDocumentation()
+);
+
 // Register workout tools
 server.tool(
   'get-workouts',
-  'Get workouts between start and end dates. Returns all workouts if no dates are provided. Returns workouts in descending order of date and limits the number of workouts returned. Max 10 workouts.',
-  {
-    limit: z.number().min(1).max(10).default(10).describe('Number of workouts to retrieve'),
-    startDate: z
-      .string()
-      .optional()
-      .describe('Optional: ISO date string to filter workouts after this date'),
-    endDate: z
-      .string()
-      .optional()
-      .describe('Optional: ISO date string to filter workouts before this date'),
-  },
-  async ({ limit, startDate, endDate }: GetWorkoutsParams) => {
-    const workouts = await hevyService.getWorkouts(
-      startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined
-    );
+  `Get workouts between start and end dates. Returns all workouts if no dates are provided. Returns workouts in descending order of date and limits the number of workouts returned. Max 10 workouts.
 
-    if (!workouts) {
-      return createErrorResponse('Failed to retrieve workouts');
-    }
-
-    // Format workout data with stats and limit the results
-    const formattedWorkouts = workouts.slice(0, limit).map((workout) => {
-      const stats = hevyService.calculateWorkoutStats(workout);
-      return {
-        id: workout.id,
-        title: workout.title,
-        date: new Date(workout.start_time).toISOString(),
-        durationMinutes: stats.durationMinutes,
-        totalVolume: stats.totalVolume,
-        exercises: workout.exercises.map((exercise) => ({
-          id: exercise.exercise_template_id,
-          name: exercise.title,
-          sets: exercise.sets.map((set) => ({
-            weight: set.weight_kg,
-            reps: set.reps,
-          })),
-        })),
-      };
-    });
-
-    const response = {
-      workouts: formattedWorkouts,
-      totalWorkouts: workouts.length,
-      returnedWorkouts: formattedWorkouts.length,
-    };
-
-    return createSuccessResponse(response);
-  }
+Example:
+{
+  "limit": 5,                           // Optional: Number of workouts (1-10, default: 10)
+  "startDate": "2024-01-01T00:00:00Z", // Optional: Filter workouts after this date
+  "endDate": "2024-03-20T23:59:59Z"    // Optional: Filter workouts before this date
+}`,
+  getWorkoutsSchema,
+  async (params: GetWorkoutsParams) => getWorkouts(params)
 );
 
 server.tool(
   'get-exercise-progress-by-ids',
-  'Get progress for a specific exercises between start and end dates. Returns all workouts if no dates are provided. Returns workouts in descending order of date and limits the number of workouts returned. Max 10 workouts. Give exercise IDs as an array of strings.',
-  {
-    exerciseIds: z.array(z.string()).describe('IDs of the exercises to retrieve progress for'),
-    limit: z.number().min(0).max(10).default(10).describe('Number of latest workouts to retrieve'),
-    startDate: z
-      .string()
-      .optional()
-      .describe('Optional: ISO date string to filter workouts after this date'),
-    endDate: z
-      .string()
-      .optional()
-      .describe('Optional: ISO date string to filter workouts before this date'),
-  },
-  async ({ exerciseIds, limit, startDate, endDate }: GetExerciseProgressParams) => {
-    try {
-      const [workouts, allExercises] = await Promise.all([
-        hevyService.getWorkouts(
-          startDate ? new Date(startDate) : undefined,
-          endDate ? new Date(endDate) : undefined
-        ),
-        hevyService.fetchAllExerciseTemplates(),
-      ]);
+  `Get progress history for specific exercises between start and end dates. Returns exercise data including weights, reps, and sets for each workout. Results are ordered by date descending. Useful for tracking progress over time for particular exercises.
 
-      // Get only relevant exercises
-      const exercises = allExercises.filter((exercise) => exerciseIds.includes(exercise.id));
-
-      // Get progress for each exercise
-      const exerciseProgress = exercises.map((exercise) =>
-        hevyService.processExerciseProgress(exercise, workouts, limit)
-      );
-
-      return createSuccessResponse({ exerciseProgress });
-    } catch (error) {
-      console.error('Error processing exercise progress:', error);
-      return createErrorResponse('Failed to process exercise progress data');
-    }
-  }
+Example:
+{
+  "exerciseIds": ["bench-press-123", "squat-456"], // Required: Array of exercise IDs
+  "limit": 5,                                      // Optional: Number of workouts (0-10, default: 10)
+  "startDate": "2024-01-01T00:00:00Z",            // Optional: Filter after this date
+  "endDate": "2024-03-20T23:59:59Z"               // Optional: Filter before this date
+}`,
+  getExerciseProgressSchema,
+  async (params: GetExerciseProgressParams) => getExerciseProgressByIds(params)
 );
 
 server.tool(
   'get-exercises',
-  'Get comprehensive exercise data sorted by frequency of use between start and end dates. Returns all exercises if no dates are provided. Returns exercises in descending order of frequency of use and limits the number of exercises returned. Give search term to filter exercises by name. Exclude unused exercises by default.',
-  {
-    searchTerm: z.string().optional().describe('Optional: Search term to filter exercises by name'),
-    excludeUnused: z
-      .boolean()
-      .optional()
-      .default(true)
-      .describe('If true, exclude exercises with zero frequency (never done)'),
-    startDate: z
-      .string()
-      .optional()
-      .describe('Optional: ISO date string to filter workouts after this date'),
-    endDate: z
-      .string()
-      .optional()
-      .describe('Optional: ISO date string to filter workouts before this date'),
-  },
-  async ({ searchTerm, excludeUnused, startDate, endDate }: GetExercisesParams) => {
-    try {
-      const exercises = await hevyService.getExercises(
-        searchTerm,
-        excludeUnused,
-        startDate,
-        endDate
-      );
+  `Get comprehensive exercise data including frequency of use, categorization, and metadata. Results are sorted by usage frequency. Supports filtering by name search and date range.
 
-      if (!exercises?.length) {
-        return createErrorResponse(
-          searchTerm ? `No exercises found matching: ${searchTerm}` : 'No exercise data found'
-        );
-      }
-
-      return createSuccessResponse({ exercises });
-    } catch (error) {
-      console.error('Error in get-exercises:', error);
-      return createErrorResponse('Failed to retrieve exercises');
-    }
-  }
+Example:
+{
+  "searchTerm": "bench press",          // Optional: Filter exercises by name
+  "excludeUnused": true,               // Optional: Skip never-performed exercises (default: true)
+  "startDate": "2024-01-01T00:00:00Z", // Optional: Consider usage after this date
+  "endDate": "2024-03-20T23:59:59Z"    // Optional: Consider usage before this date
+}`,
+  getExercisesSchema,
+  async (params: GetExercisesParams) => getExercises(params)
 );
 
-server.tool('get-routines', "Get user's workout routines", {}, async () => {
-  const routines = await hevyService.fetchAllRoutines();
+server.tool(
+  'get-routines',
+  `Get user's saved workout routines. Returns all custom and preset routines with their full exercise details, including sets, reps, and rest periods.
 
-  if (routines.length === 0) {
-    return createErrorResponse('Failed to retrieve routines');
-  }
+Example:
+{} // No parameters required`,
+  getRoutinesSchema,
+  async () => getRoutines()
+);
 
-  return createSuccessResponse({ routines });
-});
+// Add smart routine builder prompt handler
+server.prompt(
+  'Build me a new workout routine',
+  'I will analyze your existing routines and favorite exercises to suggest a new personalized routine.',
+  async () => await createWorkoutPrompt()
+);
 
 // Start the server
 async function main() {
-  await hevyService.populateCache();
+  //await hevyService.populateCache();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Hevy Trainer MCP Server running on stdio');

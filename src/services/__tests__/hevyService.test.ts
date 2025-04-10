@@ -410,9 +410,7 @@ describe('Hevy Service', () => {
           new Error('API error')
         );
 
-        const workouts = await fetchAllWorkouts();
-
-        expect(workouts).toEqual([]);
+        await expect(fetchAllWorkouts()).rejects.toThrow('API error');
       });
     });
 
@@ -455,9 +453,7 @@ describe('Hevy Service', () => {
           new Error('API error')
         );
 
-        const exercises = await fetchAllExerciseTemplates();
-
-        expect(exercises).toEqual([]);
+        await expect(fetchAllExerciseTemplates()).rejects.toThrow('API error');
       });
     });
 
@@ -495,9 +491,7 @@ describe('Hevy Service', () => {
           new Error('API error')
         );
 
-        const routines = await fetchAllRoutines();
-
-        expect(routines).toEqual([]);
+        await expect(fetchAllRoutines()).rejects.toThrow('API error');
       });
     });
 
@@ -528,9 +522,7 @@ describe('Hevy Service', () => {
         );
 
         const startDate = new Date('2023-01-01T00:00:00Z');
-        const result = await getWorkouts(startDate);
-
-        expect(result).toEqual([]);
+        await expect(getWorkouts(startDate)).rejects.toThrow('API error');
       });
     });
 
@@ -662,9 +654,7 @@ describe('Hevy Service', () => {
           new Error('API error')
         );
 
-        const result = await getExercises();
-
-        expect(result).toEqual([]);
+        await expect(getExercises()).rejects.toThrow('API error');
       });
 
       it('should filter out exercises with zero frequency when excludeUnused is true', async () => {
@@ -885,7 +875,7 @@ describe('Hevy Service', () => {
         new Error('API error')
       );
 
-      await expect(populateCache()).resolves.toBeUndefined();
+      await expect(populateCache()).rejects.toThrow('API error');
     });
   });
 

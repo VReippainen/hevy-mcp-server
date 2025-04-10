@@ -1,36 +1,18 @@
-import { createErrorResponse, createResponse, createSuccessResponse } from '../responseUtils';
+import { createErrorResponse, createSuccessResponse } from '../responseUtils';
 import { describe, it, expect } from 'vitest';
 
 describe('Response Utilities', () => {
-  describe('createResponse', () => {
-    it('should wrap data in a standardized response format', () => {
-      const data = { foo: 'bar', baz: 123 };
-      const result = createResponse(data);
-
-      expect(result).toEqual({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(data),
-          },
-        ],
-      });
-    });
-  });
-
   describe('createErrorResponse', () => {
     it('should create an error response with the given message', () => {
       const errorMessage = 'Something went wrong';
       const result = createErrorResponse(errorMessage);
 
       expect(result).toEqual({
+        isError: true,
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              success: false,
-              message: errorMessage,
-            }),
+            text: errorMessage,
           },
         ],
       });
@@ -47,7 +29,6 @@ describe('Response Utilities', () => {
           {
             type: 'text',
             text: JSON.stringify({
-              success: true,
               ...data,
             }),
           },
@@ -62,9 +43,7 @@ describe('Response Utilities', () => {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              success: true,
-            }),
+            text: JSON.stringify({}),
           },
         ],
       });
