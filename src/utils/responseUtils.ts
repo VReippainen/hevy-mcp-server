@@ -13,30 +13,14 @@ export interface Response {
   content: ResponseContent[];
 }
 
-export interface ErrorResponseData {
-  success: false;
-  message: string;
-}
-
-export interface SuccessResponseData extends Record<string, unknown> {
-  success: true;
-}
-
 /**
  * Creates a standardized error response object
  * @param message The error message to include in the response
  */
 export function createErrorResponse(message: string): Response {
-  return createResponse<ErrorResponseData>({ success: false, message });
-}
-
-/**
- * Creates a standardized response object
- * @param data The data to include in the response
- */
-export function createResponse<T>(data: T): Response {
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(data) }],
+    isError: true,
+    content: [{ type: 'text' as const, text: message }],
   };
 }
 
@@ -45,5 +29,7 @@ export function createResponse<T>(data: T): Response {
  * @param data The data to include in the response
  */
 export function createSuccessResponse<T>(data: T): Response {
-  return createResponse<SuccessResponseData & T>({ success: true, ...data });
+  return {
+    content: [{ type: 'text' as const, text: JSON.stringify(data) }],
+  };
 }

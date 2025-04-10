@@ -15,6 +15,20 @@ This MCP server provides the following tools:
 - **get-exercises**: Get comprehensive exercise data sorted by frequency of use, with optional filtering by name and date range. Returns also actual and estimated 1RM.
 - **get-routines**: Retrieve your saved workout routines
 
+## Workout Prompt Builder
+
+The server includes a smart workout prompt builder that:
+- Analyzes your most frequently used exercises and their estimated 1RMs
+- Lists your saved workout routines with detailed exercise information
+- Helps AI assistants create personalized workout recommendations based on your history
+
+## Resource Documentation
+
+The server provides comprehensive documentation of all available tools and their parameters through a dedicated resource endpoint. This documentation includes:
+- Detailed parameter descriptions
+- Valid parameter ranges and defaults
+- Example usage scenarios
+
 ### Obtaining Your Hevy API Key
 
 To get your Hevy API key, visit the [Hevy API Documentation](https://api.hevyapp.com/docs/#/) and follow the authentication instructions. You'll need to sign up for API access through the Hevy developer portal.

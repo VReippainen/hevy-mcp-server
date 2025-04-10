@@ -42,4 +42,4 @@ export const getExercisesSchema = {
     .describe('Optional: ISO date string to filter workouts before this date'),
 };
 
-export const getRoutinesSchema = {}; 
+export const getRoutinesSchema = {};

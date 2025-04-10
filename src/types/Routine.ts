@@ -3,11 +3,24 @@
  */
 export interface Routine {
   id: string;
-  name: string;
+  title: string;
   description: string;
-  exercises: string[];
+  exercises: RoutineExercise[];
   createdAt: string;
   updatedAt: string;
+}
+
+interface RoutineExercise {
+  exercise_template_id: string;
+  title: string;
+  sets: Set[];
+}
+
+interface Set {
+  weight_kg: number;
+  reps: number;
+  index: number;
+  type: string;
 }
 
 /**

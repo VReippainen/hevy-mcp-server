@@ -30,8 +30,8 @@ describe('Tool Functions', () => {
             exercise_template_id: 'ex1',
             title: 'Bench Press',
             sets: [
-              { weight_kg: 100, reps: 10 },
-              { weight_kg: 110, reps: 8 },
+              { weight_kg: 100, reps: 10, index: 0, notes: '', superset_id: '' },
+              { weight_kg: 110, reps: 8, index: 1, notes: '', superset_id: '' },
             ],
           },
         ],
