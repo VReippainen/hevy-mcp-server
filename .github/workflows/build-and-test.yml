@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0  # This ensures we have the full git history
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'  # Read Node version from .nvmrc file
           registry-url: 'https://registry.npmjs.org/'
